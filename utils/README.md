@@ -1,8 +1,3 @@
-# mpc-trajectory-generator
+# utils
 
-
-## Environment 
-Create the environment using conda by navigating to the folder and run 
-   ```
-   conda env create -f env/environment.yml
-   ```
+Utility scripts etc. for use in the project
