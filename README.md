@@ -11,3 +11,8 @@ Activate the environment using
    ```
    conda activate ssy226
    ```
+   
+Update using
+   ```
+   conda env update -f env/environment.yml --prune
+   ```
