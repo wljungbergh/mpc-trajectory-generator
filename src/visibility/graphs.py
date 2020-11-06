@@ -63,7 +63,7 @@ class Graphs:
 
 
 
-    def get_grapth(self, complexity):
+    def get_graph(self, complexity):
         if not (self.min_complexity <= complexity <= self.max_complexity):
             raise ValueError(f'Complexity should be in the range {self.min_complexity } - {self.max_complexity}')
 
