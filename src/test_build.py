@@ -162,7 +162,7 @@ class MpcModule:
 
         mng.ping()
 
-        rect1 = [-1, 1, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.25, 0.25, 0.25, 0.25]
+        rect1 = [1, 1, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.75, 0.75, 0.75, 0.75]
         self.rectangles.append(rect1)
 
         rect2 = [0, -1.5, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.75, 0.75, 0.75, 0.75]
@@ -172,7 +172,7 @@ class MpcModule:
         for i, rect in enumerate(self.rectangles):
             rectangles[i*nobs:(i+1)*nobs] = rect
 
-        parameters = x_init+x_finish+rectangles+[1]
+        parameters = x_init+x_finish+rectangles+[2]
         
         solution = mng.call(parameters, initial_guess=initial_guess)
         mng.kill()
@@ -200,7 +200,9 @@ if __name__ == '__main__':
     mpc_module = MpcModule(N, nu, nz, nobs, Nobs, nedges, ts)
 
     if do_build:
-        mpc_module.build()
+        response = input('Are you sure you want to build? (type anything)')
+        if response:
+            mpc_module.build()
 
     if do_run:
         mpc_module.run()
