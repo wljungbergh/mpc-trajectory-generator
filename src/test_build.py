@@ -49,7 +49,8 @@ class MpcModule:
 
 
             for i in range(0, self.Nobs*self.nobs, self.nobs): # LOOP OVER ALL OBSTACLES
-                xi, yi = (z0[nz+i], z0[nz+i+1]) # Center of obstacle i
+                obstacle = z0[self.nz+i:self.nz+i+self.nobs]
+                xi, yi = obstacle[0], obstacle[1] # Center of obstacle i
                 xdiff = x-xi
                 ydiff = y-yi
                 angle = cs.fmod(cs.atan2(ydiff, xdiff),2.0*cs.pi) # angle between obstacle and current position
@@ -58,12 +59,13 @@ class MpcModule:
                 smallest_angle_diff = cs.pi*2.0
                 
                 psi_nearest = cs.SX.zeros(1,1)
+                phi_sum = 0
 
                 for j in range(0,self.nedges): # LOOP OVER ALL EDGES IN OBSTACLE i
 
-                    psi = z0[nz+i+2+self.nedges+j] # distance for current edge
+                    psi = obstacle[2+self.nedges+j] # distance for current edge
                     
-                    phi_sum = cs.dot(z0[nz+i+2:nz+i+2+j+1],cs.SX.ones(j+1,1)) # acccum angle for current edge
+                    phi_sum += obstacle[2+j] # acccum angle for current edge
                     temp_diff = cs.fmin((2 * cs.pi) - cs.fabs(phi_sum - angle), cs.fabs(phi_sum - angle))
                     temp_bool = temp_diff < smallest_angle_diff
                     psi_nearest = cs.if_else(temp_bool, psi, psi_nearest)
@@ -153,7 +155,7 @@ class MpcModule:
         # ------------------------------------
         x_init = [-2.0, -2.0, math.pi/4]
         x_finish = [2, 2, math.pi/4]
-        initial_guess = [1.5, 0.0] * 7 + [1.5, -cs.pi/4/0.2/3] * 3 + [1.5, 0.0] * 4 + [0.5, cs.pi/4/0.2/3] * 6 + [1.5, 0] * 7
+        initial_guess = [1.5, 0.1] * 7 + [1.5, -cs.pi/4/0.2/3] * 3 + [1.5, 0.0] * 4 + [0.5, cs.pi/4/0.2/3] * 6 + [1.5, 0] * 7
         initial_guess += (N*nu-len(initial_guess))*[0.0]
         #plot_trajectory(inital_guess, x_init)
 
@@ -172,7 +174,7 @@ class MpcModule:
         for i, rect in enumerate(self.rectangles):
             rectangles[i*nobs:(i+1)*nobs] = rect
 
-        parameters = x_init+x_finish+rectangles+[2]
+        parameters = x_init+x_finish+rectangles+[3]
         
         solution = mng.call(parameters, initial_guess=initial_guess)
         mng.kill()
