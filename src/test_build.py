@@ -19,11 +19,11 @@ class MpcModule:
         self.N_lookahead = N    # lookahead
         self.nu = nu            # decision per time steps
         self.nz = nz            # number of states
-        self.nobs = nobs # number of params per obstacle
-        self.Nobs = Nobs # number of obstacles
-        self.nedges = nedges # number of edges per obstacle
-        self.rectangles = []
-        self.ts = ts
+        self.nobs = nobs        # number of params per obstacle
+        self.Nobs = Nobs        # number of obstacles
+        self.nedges = nedges    # number of edges per obstacle
+        self.rectangles = []    # list of rectangle parameters
+        self.ts = ts            # time step size
         
 
     def build(self):
@@ -31,7 +31,7 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.nu*self.N_lookahead)
-        z0 = cs.SX.sym('z0', self.nz+self.Nobs*self.nobs+1)
+        z0 = cs.SX.sym('z0', self.nz+self.Nobs*self.nobs+1) #init + final position, obstacle params, number of obstacles to consider
 
 
         (x, y, theta) = (z0[0], z0[1], z0[2])
@@ -64,19 +64,19 @@ class MpcModule:
                     psi = z0[nz+i+2+self.nedges+j] # distance for current edge
                     
                     phi_sum = cs.dot(z0[nz+i+2:nz+i+2+j+1],cs.SX.ones(j+1,1)) # acccum angle for current edge
-                    temp_diff = cs.fmod(phi_sum - angle, 2.0*cs.pi)
+                    temp_diff = cs.fmin((2 * cs.pi) - cs.fabs(phi_sum - angle), cs.fabs(phi_sum - angle))
                     temp_bool = temp_diff < smallest_angle_diff
                     psi_nearest = cs.if_else(temp_bool, psi, psi_nearest)
                     phi_sum_nearest = cs.if_else(temp_bool, phi_sum, phi_sum_nearest)
                     smallest_angle_diff = cs.if_else(temp_bool, temp_diff, smallest_angle_diff)
 
-                    
                 Fi = xdiff*cs.cos(phi_sum_nearest) + ydiff*cs.sin(phi_sum_nearest)
-                is_inside = cs.if_else(Fi < psi_nearest, True, False)
+                '''is_inside = cs.if_else(Fi < psi_nearest, True, False)
 
                 psi = cs.if_else(is_inside, psi_nearest, 0)
                 d  = cs.if_else(is_inside, Fi, 0)
-                c += cs.if_else(cs.logic_and(is_inside, i < z0[-1]), cs.fmax(0,psi-d), 0)
+                c += cs.if_else(cs.logic_and(is_inside, i < z0[-1]), cs.fmax(0,psi-d), 0)'''
+                c += cs.if_else(i < z0[-1], cs.fmax(0,psi_nearest-Fi), 0)
 
 
         cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
@@ -162,10 +162,10 @@ class MpcModule:
 
         mng.ping()
 
-        rect1 = [1, 1, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.5, 0.5, 0.5, 0.5]
+        rect1 = [-1, 1, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.25, 0.25, 0.25, 0.25]
         self.rectangles.append(rect1)
 
-        rect2 = [0, -1.5, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.5, 0.5, 0.5, 0.5]
+        rect2 = [0, -1.5, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.75, 0.75, 0.75, 0.75]
         self.rectangles.append(rect2)
 
         rectangles = [0.0] * (Nobs*nobs)
@@ -194,7 +194,7 @@ class MpcModule:
         plt.show()
 
 if __name__ == '__main__':
-    do_build = False
+    do_build = True
     do_run = True
 
     mpc_module = MpcModule(N, nu, nz, nobs, Nobs, nedges, ts)
