@@ -107,11 +107,10 @@ class MpcModule:
         return (rect[0]-rect[-1], rect[0]+rect[-1], rect[1]-rect[-1], rect[1]+rect[-1])
 
     def plot_trajectory(self, u, x_init):
-        N = len(u)//nu
-        nx = nz//2
-        x_states = [0.0] * (nx*(N+2))
+        nx = self.nz//2 # nx is start and end state
+        x_states = [0.0] * (nx*(self.N_lookahead+2))
         x_states[0:nx+1] = x_init
-        for t in range(0, N):
+        for t in range(0, self.N_lookahead):
             u_t = u[t*nu:(t+1)*nu]
 
             x = x_states[t * nx]
@@ -169,11 +168,11 @@ class MpcModule:
         rect2 = [0, -1.5, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.5, 0.5, 0.5, 0.5]
         self.rectangles.append(rect2)
 
-        rectangles = list(np.zeros(Nobs*nobs))
+        rectangles = [0.0] * (Nobs*nobs)
         for i, rect in enumerate(self.rectangles):
             rectangles[i*nobs:(i+1)*nobs] = rect
 
-        parameters = x_init+x_finish+rectangles+[2]
+        parameters = x_init+x_finish+rectangles+[1]
         
         solution = mng.call(parameters, initial_guess=initial_guess)
         mng.kill()
