@@ -7,26 +7,82 @@ import math
 MAX_NUMBER_OF_OBSTACLES = 10
 MAX_SOVLER_TIME = 10_000_000
 
-(nu, nz, N) = (2, 6, 70) # v and w decision, 3 init and 3 end positions as parameter, 30 time steps
-nedges = 4
-(nobs, Nobs) = (2+2*nedges, MAX_NUMBER_OF_OBSTACLES) #x,y, 4 phis and 4 psis
-ts = 0.2
-(q, qtheta, rv, rw, qN, qthetaN) = (0.1, 0, 0.1, 0.1, 2000, 0)
-
 class MpcModule:
 
-    def __init__(self, N, nu, nz, nobs, Nobs, nedges, ts):
-        self.N_lookahead = N    # lookahead
-        self.nu = nu            # decision per time steps
-        self.nz = nz            # number of states
-        self.nobs = nobs        # number of params per obstacle
-        self.Nobs = Nobs        # number of obstacles
-        self.nedges = nedges    # number of edges per obstacle
-        self.rectangles = []    # list of rectangle parameters
-        self.ts = ts            # time step size
+    def __init__(self, N, nu, nz, nobs, Nobs, nedges, ts, obstacle_type):
+        self.N_lookahead = N                    # lookahead
+        self.nu = nu                            # decision per time steps
+        self.nz = nz                            # number of states
+        self.nobs = nobs                        # number of params per obstacle
+        self.Nobs = Nobs                        # number of obstacles
+        self.nedges = nedges                    # number of edges per obstacle
+        self.obstacles = []                     # list of rectangle parameters
+        self.ts = ts                            # time step size
+        self.obstacle_type = obstacle_type      # obstacle type
         
-
     def build(self):
+        if self.obstacle_type == 'rect':
+            print('Building rectangle obstacle...')
+            self.build_rect()
+        elif self.obstacle_type == 'circ':
+            print('Building circle obstacle...')
+            self.build_circ()
+
+    def build_circ(self):
+        # Build parametric optimizer
+        # ------------------------------------
+        
+        u = cs.SX.sym('u', self.nu*self.N_lookahead)
+        z0 = cs.SX.sym('z0', self.nz+self.Nobs*self.nobs+1) #init + final position, obstacle params, circle radius
+
+        (x, y, theta) = (z0[0], z0[1], z0[2])
+        (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
+        cost = 0
+        c = 0
+
+        for t in range(0, self.nu*self.N_lookahead, self.nu): # LOOP OVER TIME STEPS
+            cost += q*((x-xref)**2 + (y-yref)**2) + qtheta*(theta-thetaref)**2
+            u_t = u[t:t+nu]
+            cost += rv * u_t[0]**2 + rw * u_t[1] ** 2
+            x += ts * (u_t[0] * cs.cos(theta))
+            y += ts * (u_t[0] * cs.sin(theta))
+            theta += ts * u_t[1]
+
+            xs = z0[self.nz:self.nz+self.Nobs*self.nobs:2]
+            ys = z0[self.nz+1:self.nz+self.Nobs*self.nobs:2]
+
+            xdiff = x-xs
+            ydiff = y-ys
+
+            circ_radius = z0[self.nz+self.Nobs*self.nobs]
+
+            c+= cs.fmax(0, circ_radius**2-xdiff**2-ydiff**2)
+
+        cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
+
+        umin = [-1.5] * (nu*N) 
+        umax = [1.5] * (nu*N) 
+        bounds = og.constraints.Rectangle(umin, umax)
+
+        problem = og.builder.Problem(u, z0, cost).with_aug_lagrangian_constraints(c, og.constraints.Zero(), og.constraints.Zero()) \
+                                                    .with_constraints(bounds)
+        build_config = og.config.BuildConfiguration()\
+            .with_build_directory("python_test_build")\
+            .with_build_mode("debug")\
+            .with_tcp_interface_config()
+        meta = og.config.OptimizerMeta()\
+            .with_optimizer_name("navigation")
+        solver_config = og.config.SolverConfiguration()\
+                .with_tolerance(1e-5)\
+                .with_max_duration_micros(MAX_SOVLER_TIME)
+        builder = og.builder.OpEnOptimizerBuilder(problem, 
+                                                meta,
+                                                build_config, 
+                                                solver_config) \
+            .with_verbosity_level(1)
+        builder.build()
+
+    def build_rect(self):
         # Build parametric optimizer
         # ------------------------------------
         
@@ -130,11 +186,21 @@ class MpcModule:
 
         plt.subplot(313)
         plt.plot(xx, xy, '-o')
-        for rect in self.rectangles:
-            xmin, xmax, ymin, ymax = self.x_y_from_rect(rect)
-            plt.plot([xmin,xmax,xmax,xmin, xmin], [ymin, ymin, ymax, ymax, ymin])
+        self.plot_obstacles()
         
         plt.axis('equal')
+        plt.grid('on')
+
+    def plot_obstacles(self):
+        if self.obstacle_type == 'rect':
+            for rect in self.obstacles:
+                xmin, xmax, ymin, ymax = self.x_y_from_rect(rect)
+                plt.plot([xmin,xmax,xmax,xmin, xmin], [ymin, ymin, ymax, ymax, ymin])
+
+        elif self.obstacle_type == 'circ':
+            for circ in self.obstacles:
+                circle = plt.Circle((circ[0],circ[1]),circ[2],color='r')
+                plt.gcf().gca().add_artist(circle)
 
     def plot_vel_omega(self, u_star):
         time = np.arange(0, self.ts*self.N_lookahead, self.ts)
@@ -149,8 +215,66 @@ class MpcModule:
         plt.plot(time, omega, '-o')
         plt.ylabel('angular velocity')
         plt.xlabel('Time')
-
+    
     def run(self):
+        if self.obstacle_type == 'rect':
+            self.run_rect()
+        elif self.obstacle_type == 'circ':
+            self.run_circ()
+
+    def run_circ(self):
+        # Use TCP server
+        # ------------------------------------
+        x_init = [-2.0, -2.0, math.pi/4]
+        x_finish = [2.0, 2.0, math.pi/4]
+        radius = 0.5
+
+        mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
+        mng.start()
+
+        mng.ping()
+
+        circ = [1, 1, radius]
+        self.obstacles.append(circ)
+
+        circ = [0, -1, radius]
+        self.obstacles.append(circ)
+
+        circ = [2, -1, radius]
+        self.obstacles.append(circ)
+
+        circ = [2, 1, radius]
+        self.obstacles.append(circ)
+
+        circ = [-0.5, -0.2, radius]
+        self.obstacles.append(circ)
+
+        circles = [100.0] * (self.Nobs*self.nobs)
+        for i, circ in enumerate(self.obstacles):
+            circles[i*self.nobs:(i+1)*self.nobs] = circ[0:2]
+
+        parameters = x_init+x_finish+circles+[radius]
+        
+        solution = mng.call(parameters)
+        mng.kill()
+
+        print(f'Solution time: {solution["solve_time_ms"]}')
+        print(f'Exit status: {solution["exit_status"]}')
+
+
+        # Plot solution
+        # ------------------------------------
+        
+        u_star = solution['solution']
+        self.plot_vel_omega(u_star)
+
+        # Plot trajectory
+        # ------------------------------------
+        self.plot_trajectory(u_star, x_init)
+
+        plt.show()
+
+    def run_rect(self):
         # Use TCP server
         # ------------------------------------
         x_init = [-2.0, -2.0, math.pi/4]
@@ -165,18 +289,18 @@ class MpcModule:
         mng.ping()
 
         rect1 = [1, 1, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.75, 0.75, 0.75, 0.75]
-        self.rectangles.append(rect1)
+        self.obstacles.append(rect1)
 
         rect2 = [0, -1.5, 0, cs.pi/2, cs.pi/2, cs.pi/2, 0.75, 0.75, 0.75, 0.75]
-        self.rectangles.append(rect2)
+        self.obstacles.append(rect2)
 
-        rectangles = [0.0] * (Nobs*nobs)
-        for i, rect in enumerate(self.rectangles):
-            rectangles[i*nobs:(i+1)*nobs] = rect
+        rectangles = [0.0] * (self.Nobs*self.nobs)
+        for i, rect in enumerate(self.obstacles):
+            rectangles[i*self.nobs:(i+1)*self.nobs] = rect
 
         parameters = x_init+x_finish+rectangles+[3]
         
-        solution = mng.call(parameters, initial_guess=initial_guess)
+        solution = mng.call(parameters)
         mng.kill()
 
         print(f'Solution time: {solution["solve_time_ms"]}')
@@ -198,8 +322,23 @@ class MpcModule:
 if __name__ == '__main__':
     do_build = True
     do_run = True
+    rect = False
+    if rect:
+        (nu, nz, N) = (2, 6, 70) # v and w decision, 3 init and 3 end positions as parameter, 30 time steps
+        nedges = 4
+        (nobs, Nobs) = (2+2*nedges, MAX_NUMBER_OF_OBSTACLES) #x,y, 4 phis and 4 psis
+        ts = 0.2
+        (q, qtheta, rv, rw, qN, qthetaN) = (0.1, 0, 0.1, 0.1, 2000, 0)
+        obstacle_type = 'rect'
+    else:
+        (nu, nz, N) = (2, 6, 70) # v and w decision, 3 init and 3 end positions as parameter, 30 time steps
+        nedges = None
+        (nobs, Nobs) = (2, MAX_NUMBER_OF_OBSTACLES) # x,y for each circle
+        ts = 0.2
+        (q, qtheta, rv, rw, qN, qthetaN) = (0.1, 0, 0.1, 0.1, 2000, 0)
+        obstacle_type = 'circ'
 
-    mpc_module = MpcModule(N, nu, nz, nobs, Nobs, nedges, ts)
+    mpc_module = MpcModule(N, nu, nz, nobs, Nobs, nedges, ts, obstacle_type)
 
     if do_build:
         response = input('Are you sure you want to build? (type anything)')
