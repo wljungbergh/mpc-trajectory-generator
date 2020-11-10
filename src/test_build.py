@@ -64,17 +64,20 @@ class MpcModule:
         umax = [1.5] * (nu*N) 
         bounds = og.constraints.Rectangle(umin, umax)
 
-        problem = og.builder.Problem(u, z0, cost).with_aug_lagrangian_constraints(c, og.constraints.Zero(), og.constraints.Zero()) \
+        problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(c) \
                                                     .with_constraints(bounds)
         build_config = og.config.BuildConfiguration()\
             .with_build_directory("python_test_build")\
             .with_build_mode("debug")\
             .with_tcp_interface_config()
+
         meta = og.config.OptimizerMeta()\
             .with_optimizer_name("navigation")
+
         solver_config = og.config.SolverConfiguration()\
                 .with_tolerance(1e-5)\
                 .with_max_duration_micros(MAX_SOVLER_TIME)
+
         builder = og.builder.OpEnOptimizerBuilder(problem, 
                                                 meta,
                                                 build_config, 
@@ -165,24 +168,24 @@ class MpcModule:
         return (rect[0]-rect[-1], rect[0]+rect[-1], rect[1]-rect[-1], rect[1]+rect[-1])
 
     def plot_trajectory(self, u, x_init):
-        nx = self.nz//2 # nx is start and end state
-        x_states = [0.0] * (nx*(self.N_lookahead+2))
-        x_states[0:nx+1] = x_init
+        nx = self.nz//2 # nz is start and end state
+        states = [0.0] * (nx*(self.N_lookahead+1))
+        states[0:nx] = x_init
         for t in range(0, self.N_lookahead):
             u_t = u[t*nu:(t+1)*nu]
 
-            x = x_states[t * nx]
-            y = x_states[t * nx + 1]
-            theta = x_states[t * nx + 2]
+            x = states[t * nx]
+            y = states[t * nx + 1]
+            theta = states[t * nx + 2]
 
             theta_dot = u_t[1]
 
-            x_states[(t+1)*nx] = x + ts * (u_t[0] * cs.cos(theta))
-            x_states[(t+1)*nx+1] = y + ts * (u_t[0] * cs.sin(theta))
-            x_states[(t+1)*nx+2] = theta + ts*theta_dot
+            states[(t+1)*nx] = x + ts * (u_t[0] * cs.cos(theta))
+            states[(t+1)*nx+1] = y + ts * (u_t[0] * cs.sin(theta))
+            states[(t+1)*nx+2] = theta + ts*theta_dot
 
-        xx = x_states[0:nx*N:nx]
-        xy = x_states[1:nx*N:nx]
+        xx = states[0:nx*N:nx]
+        xy = states[1:nx*N:nx]
 
         plt.subplot(313)
         plt.plot(xx, xy, '-o')
@@ -226,7 +229,7 @@ class MpcModule:
         # Use TCP server
         # ------------------------------------
         x_init = [-2.0, -2.0, math.pi/4]
-        x_finish = [2.0, 2.0, math.pi/4]
+        x_finish = [2.5, 2.5, math.pi/4]
         radius = 0.5
 
         mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
