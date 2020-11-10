@@ -289,6 +289,7 @@ dmypy.json
 .prof
 
 ### VisualStudioCode ###
+.vscode/settings.json
 !.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -331,3 +332,4 @@ $RECYCLE.BIN/
 
 python_build/*
 python_test_build/*
+.vscode/settings.json
