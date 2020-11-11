@@ -162,7 +162,7 @@ class PolygonEnvironment:
             #  (would only give the same result when algorithms are correct)
             # the extremity itself must not be checked when looking for visible neighbours
             query_extremity: PolygonVertex = extremities_to_check.pop()
-            # CHANGE: do not consider vertexed outside map
+            # CHANGE: do not consider vertexed outside map <==========================================================================================
             if not self.within_map(query_extremity.coordinates):
                 continue
             self.translate(new_origin=query_extremity)
@@ -177,7 +177,7 @@ class PolygonEnvironment:
             # direct neighbours of the query vertex are visible
             # neighbouring vertices are reachable with the distance equal to the edge length
             n1, n2 = query_extremity.get_neighbours()
-            # CHANGE: Don't assume neighbouring nodes are visible, might be blocked by intersecting polygon
+            # CHANGE: Don't assume neighbouring nodes are visible, might be blocked by intersecting polygon <=============================
             '''try:
                 candidate_extremities.remove(n1)
 
@@ -240,10 +240,9 @@ class PolygonEnvironment:
             edges_to_check.remove(query_extremity.edge2)
 
             visible_vertices.update(find_visible(candidate_extremities, edges_to_check))
-            # CHANGE: only add if visible vertices are within map
+            # CHANGE: only add if visible vertices are within map <==========================================================================================
             for v, d in visible_vertices:
-                if self.within_map(v.coordinates):
-                    self.graph.add_undirected_edge(query_extremity, v, d)
+                self.graph.add_undirected_edge(query_extremity, v, d)
 
         # join all nodes with the same coordinates
         self.graph.make_clean()
