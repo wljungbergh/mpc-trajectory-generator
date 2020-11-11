@@ -153,9 +153,7 @@ class MpcModule:
         plt.ylabel('angular velocity')
         plt.xlabel('Time')
     
-        
-        
-    def run(self):
+    def get_values_test1(self):    
         # Use TCP server
         # ------------------------------------
         x_init = [-2.0, -2.0, math.pi/4]
@@ -166,34 +164,48 @@ class MpcModule:
         # ToDo add node_list in the input argument instead
         node_list = [(0,0),(3,3),(5,3),(8,1),(x_finish[0],x_finish[1])]
         
-        x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)
-        
+        x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)  
         radius = 0.1
-
-        mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
-        mng.start()
-
-        mng.ping()
         
-        # ToDo add obstacles from a list in the input argument
-        circ = [1, 1, radius]
-        self.obstacles.append(circ)
 
-        circ = [0, -1, radius]
-        self.obstacles.append(circ)
-
-        circ = [2, -1, radius]
-        self.obstacles.append(circ)
-
-        circ = [2, 1, radius]
-        self.obstacles.append(circ)
-
-        circ = [-0.5, -0.2, radius]
-        self.obstacles.append(circ)
-
+        self.obstacles = [[1, 1, radius],[0, -1, radius], [2, -1, radius],
+                          [2, 1, radius],[-0.5, -0.2, radius]]
+        
         circles = [100.0] * (self.Nobs*self.nobs)
         for i, circ in enumerate(self.obstacles):
             circles[i*self.nobs:(i+1)*self.nobs] = circ[0:2]
+            
+        return x_init, x_finish, node_list, circles, radius
+        
+    def run(self,x_init, x_finish, node_list, circles, radius):
+        """
+        Parameters
+        ----------
+        x_init : TYPE list
+            DESCRIPTION. [x_start, y_start,theta_start]
+        x_finish : TYPE list
+            DESCRIPTION. [x_finish, y_finish,theta_finish]
+        node_list : TYPE list of tuples
+            DESCRIPTION. holds all nodes to visit not including initial condition
+        circles : TYPE list of lists
+            DESCRIPTION. holds circle coordinates and 
+        radius : TYPE double
+            DESCRIPTION. radius of constraint circles
+
+        Returns
+        -------
+        None.
+
+        """
+        # Use TCP server
+        # ------------------------------------
+        
+        x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)
+        
+
+        mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
+        mng.start()
+        mng.ping()
 
         tt = time.time()
         # take this amount of steps
@@ -206,7 +218,6 @@ class MpcModule:
             #x_init = [x_ref[t], y_ref[t], theta_ref[t]]
             x_init = states[-3:] # picks out current state for new initial state to solver
             if(len(x_ref)-1 <= t+self.N_lookahead): 
-
                 take_steps = self.N_lookahead
                 terminal = True
                 x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
@@ -256,8 +267,8 @@ class MpcModule:
         
         mng.kill()
         
-        total_time = time.time()-tt   
-        print("Total solution time: {}".format(total_time))
+        total_time = int(1000*(time.time()-tt))   
+        print("Total solution time: {} ms".format(total_time))
         #print(f'Solution time: {solution["solve_time_ms"]}') # cant use this for receeding horizon
         print(f'Exit status: {solution["exit_status"]}')
 
@@ -276,7 +287,9 @@ class MpcModule:
         plt.axis('equal')
         plt.grid('on')
         plt.legend()
-        plt.show()        
+        plt.show()    
+        
+        #return xx,xy    # uncomment if we want to return the traj
         
         
 
@@ -305,7 +318,9 @@ if __name__ == '__main__':
         mpc_module.build()
 
     if do_run:
-        mpc_module.run()
+        # Run with test case
+        x_init, x_finish, node_list, circles, radius = mpc_module.get_values_test1()
+        mpc_module.run(x_init, x_finish, node_list, circles, radius)
         
     
 
