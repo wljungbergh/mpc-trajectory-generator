@@ -1,6 +1,6 @@
-import extremitypathfinder as epf
+import extremitypathfinder.extremitypathfinder as epf
 from extremitypathfinder.plotting import PlottingEnvironment, draw_prepared_map
-from extremitypathfinder import PolygonEnvironment
+from extremitypathfinder.extremitypathfinder import PolygonEnvironment
 from graphs import Graphs
 import pyclipper
 import math
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     graphs = Graphs()
 
-    g = graphs.get_graph(complexity=1)
+    g = graphs.get_graph(complexity=0)
 
     ppp = PathPreProcessor(g.boundary_coordinates, g.obstacle_list, plotting = False)
     path, _ = ppp.get_initial_guess(g.start, g.end)
