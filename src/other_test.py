@@ -166,7 +166,7 @@ class MpcModule:
         # ToDo add node_list in the input argument instead
         node_list = [(0,0),(3,3),(5,3),(8,1),(x_finish[0],x_finish[1])]
         
-        x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,1.5)
+        x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)
         
         radius = 0.1
 
@@ -282,11 +282,11 @@ class MpcModule:
 
 MAX_NUMBER_OF_OBSTACLES = 10
 MAX_SOVLER_TIME = 10_000_000
-(vmax, omega_max) = (1.5,0.2)
+(vmax, omega_max) = (1.5,0.5)
 
 if __name__ == '__main__':
-    do_build = False
-    do_run = True
+    do_build = 0
+    do_run = 1
 
     
     
@@ -294,16 +294,15 @@ if __name__ == '__main__':
     nedges = None
     (nobs, Nobs) = (2, MAX_NUMBER_OF_OBSTACLES) # x,y for each circle
     ts = 0.2
-    (q, qtheta, rv, rw, qN, qthetaN) = (1, 1, 1, 1, 100, 10)
+    (q, qtheta, rv, rw, qN, qthetaN) = (1, 1, 10, 10, 200, 10)
     obstacle_type = 'circ2'
     
     # 
     mpc_module = MpcModule(N, nu, nz, nobs, Nobs, nedges, ts, obstacle_type)
 
+
     if do_build:
-        response = input('Are you sure you want to build? (type anything)')
-        if response:
-            mpc_module.build()
+        mpc_module.build()
 
     if do_run:
         mpc_module.run()

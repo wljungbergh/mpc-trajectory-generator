@@ -2,6 +2,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,pycharm,visualstudiocode,linux,windows,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,pycharm,visualstudiocode,linux,windows,python
 
+
+python_test_build*
+
 ### Linux ###
 *~
 
