@@ -6,14 +6,9 @@ import pyclipper
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import timeit
 
-def simulate_step(state, vel, omega, dt):
-        state[0] += dt * math.cos(state[2]) * vel
-        state[1] += dt * math.sin(state[2]) * vel
-        state[2] += dt * omega
-        return state
-
-def plot_obstacles(obstacle_list, c):
+def plot_obstacles(obstacle_list, c, ax):
     for obstacle in obstacle_list:
         for i in range(len(obstacle) - 1):
             point1 = obstacle[i]
@@ -21,57 +16,20 @@ def plot_obstacles(obstacle_list, c):
             plt.plot([point1[0], point2[0]], [point1[1], point2[1]], c)
         point1 = obstacle[-1]
         point2 = obstacle[0]
-        plt.plot([point1[0], point2[0]], [point1[1], point2[1]], c)
+        ax.plot([point1[0], point2[0]], [point1[1], point2[1]], c)
 
-def plot_trajectory(inital_pose, commands, obstacle_list, end,  padded_obstacles = None):
-        N = len(commands) // 2
-        state = inital_pose
-        startx = inital_pose[0]
-        starty = inital_pose[1]
-        states = []
-        states.append(inital_pose.copy())
+def plot_boundaries(boundary_coordinates, ax, c = 'g'):
+    plot_obstacles([boundary_coordinates], c = c, ax = ax)
 
-        for t in range(0, N):
-            vel = commands[2*t]
-            omega = commands[2*t + 1]
-            state = simulate_step(state, vel, omega, 0.1)
-            states.append(state.copy())
-
-
-
-        x = [t[0] for t in states]
-        y = [t[1] for t in states]  
-        plt.subplot(313)
-        plt.plot(startx, starty, 'ro')
-        plt.plot(x, y, '-')
-        plt.plot(end[0], end[1], 'ro')
-        plot_obstacles(obstacle_list, c = 'k')
-        if not padded_obstacles is None:
-            plot_obstacles(obstacle_list, c = 'g')
-
-        #plt.axis('equal')
-
-def plot_boundaries(boundary_coordinates, c = 'g'):
-    plot_obstacles([boundary_coordinates], c = c)
-
-def plot_commands(commands, dt = 0.1):
-    N = len(commands) // 2
-    time = np.arange(0, dt*N, dt)
-    vel = commands[::2]
-    omega = commands[1::2]
-
-    plt.subplot(311)
-    plt.plot(time, vel, '-o')
-    plt.ylabel('velocity')
-    plt.subplot(312)
-    plt.plot(time, omega, '-o')
-    plt.ylabel('angular velocity')
-    plt.xlabel('Time')
-
-def plot_path(path, c):
+def plot_path(path, c, ax):
     for i in range(len(path)-1):
-        plt.plot([path[i][0], path[i+1][0]],[path[i][1], path[i+1][1]],c)
+        ax.plot([path[i][0], path[i+1][0]],[path[i][1], path[i+1][1]],c)
 
+def plot_verticies(verticies, radius,  ax):
+    for vert in verticies:
+        c = plt.Circle(vert, radius, color = 'r', alpha = 0.7)
+        ax.add_artist(c)
+    pass
 
 class Config:
     def __init__(self):
@@ -138,6 +96,27 @@ class PathPreProcessor:
 
         return inflated_obstacles
     
+    def find_original_verticies(self, path):
+        verticies = []
+        if not (len(path) > 2):
+           print('[INFO] Path is only one line. No verticies to find.') 
+           return verticies
+
+        all_vert = self.original_obstacle_list + [self.original_boundary_coordinates]
+
+        all_vert_flat = [item for sublist in all_vert for item in sublist]
+        for vert in path[1:-1]: # dont use start and final positions as contstraints
+            best_vert = ()
+            best_dist = 10e3
+            for ref_vert in all_vert_flat:
+                dist = np.linalg.norm((np.asarray(vert) - np.asarray(ref_vert)), ord = 2)
+                if dist < best_dist: 
+                    best_dist = dist
+                    best_vert = ref_vert
+            
+            verticies.append(best_vert)
+
+        return verticies
     
 
 if __name__ == '__main__':
@@ -148,13 +127,16 @@ if __name__ == '__main__':
 
     ppp = PathPreProcessor(g.boundary_coordinates, g.obstacle_list, plotting = False)
     path, _ = ppp.get_initial_guess(g.start, g.end)
+    verticies = ppp.find_original_verticies(path)
 
-    plot_boundaries(ppp.original_boundary_coordinates,c='k')
-    plot_boundaries(ppp.processed_boundary_coordinates,c='g')
-    plot_obstacles(ppp.original_obstacle_list, c='r')
-    plot_obstacles(ppp.processed_obstacle_list,c='b')
-    plot_path(path, c='-ok')
-
+    fig, ax = plt.subplots()
+    plot_boundaries(ppp.original_boundary_coordinates, ax, c='k')
+    plot_boundaries(ppp.processed_boundary_coordinates, ax, c='g')
+    plot_obstacles(ppp.original_obstacle_list, c='r', ax = ax)
+    plot_obstacles(ppp.processed_obstacle_list,c='b', ax = ax)
+    plot_path(path, c='-ok', ax = ax)
+    plot_verticies(verticies, radius = ppp.config.vehicle_width, ax = ax)
+    plt.axis('equal')
     plt.show()
     
     
