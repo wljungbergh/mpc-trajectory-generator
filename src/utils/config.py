@@ -7,7 +7,7 @@ class Config:
     def __init__(self):
         self.vehicle_width = 0.5
         self.vehicle_margin = 0.1
-        self.N_hor = 15                    
+        self.N_hor = 8                    
         self.nu = 2                          
         self.nz = 6                           
         self.nx = 3

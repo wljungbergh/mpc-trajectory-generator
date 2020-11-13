@@ -48,11 +48,14 @@ class PathGenerator:
         print("[MPC] Getting rough reference")
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
 
-        plt.plot(x_ref, y_ref)
+        fig, ax = plt.subplots()
+        self.ppp.plot_all(ax)
+        ax.plot(x_ref, y_ref)
 
         
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
+        mng.ping()
   
         terminal = False
         t=0
@@ -83,9 +86,9 @@ class PathGenerator:
                 return
 
             if exit_status in self.config.bad_exit_codes:
-                plt.plot(states[0:-1:3], states[1:-1:3])
-                plt.show()
                 print(f"Bad converge status: {exit_status}")
+                ax.plot(states[0:-1:3], states[1:-1:3])
+                #plt.show()
             
             t += take_steps
             total_solver_time += solver_time
@@ -109,8 +112,8 @@ class PathGenerator:
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-        plt.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
-        plt.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
+        ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        ax.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
         plt.axis('equal')
         plt.grid('on')
         plt.legend()

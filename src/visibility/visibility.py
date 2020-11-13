@@ -153,10 +153,10 @@ class PathPreProcessor:
     def plot_all(self, ax):
         plot_boundaries(self.original_boundary_coordinates, ax, c='k')
         plot_boundaries(self.processed_boundary_coordinates, ax, c='g')
-        plot_obstacles(ppp.original_obstacle_list, c='r', ax = ax)
+        plot_obstacles(self.original_obstacle_list, c='r', ax = ax)
         plot_obstacles(self.processed_obstacle_list,c='b', ax = ax)
         plot_path(self.path, c='-ok', ax = ax)
-        plot_vertices(self.vert, radius = ppp.config.vehicle_width, ax = ax)
+        plot_vertices(self.vert, radius = self.config.vehicle_width, ax = ax)
     
 
 if __name__ == '__main__':
