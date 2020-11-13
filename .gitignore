@@ -335,4 +335,5 @@ $RECYCLE.BIN/
 
 python_build/*
 python_test_build/*
+mpc_build*
 .vscode/settings.json

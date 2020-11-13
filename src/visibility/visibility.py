@@ -1,7 +1,7 @@
 import extremitypathfinder.extremitypathfinder as epf
 from extremitypathfinder.plotting import PlottingEnvironment, draw_prepared_map
 from extremitypathfinder.extremitypathfinder import PolygonEnvironment
-from graphs import Graphs
+from visibility.graphs import Graphs
 import pyclipper
 import math
 import numpy as np

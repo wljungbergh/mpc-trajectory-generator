@@ -4,26 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import time
+import os
 
 MAX_NUMBER_OF_OBSTACLES = 10
 MAX_SOVLER_TIME = 10_000_000
 
-class Config:
-    def __init__(self):
-        self.N_hor = 10                    # lookahead
-        self.nu = 2                            # decision per time steps
-        self.nz = 6                            # number of states
-        self.nobs = 3                        # number of params per obstacle
-        self.Nobs =  10                       # number of obstacles
-        self.ts = 0.2                            # time step size
-        self.vmax = 1.5
-        self.omega_max = 0.5
-        self.q = 1
-        self.qtheta = 1
-        self.rv = 10
-        self.rw = 10
-        self.qN = 200
-        self.qthetaN = 10
 
 class MpcModule:
 
@@ -34,7 +19,7 @@ class MpcModule:
     def rough_ref(self, pos, node_list, i=0):
     
         #i = 0 # current index of target node
-        v = 0.9*self.config.vmax # Want to plan reference trajectory with less than top speed 
+        v = self.config.throttle_ratio*self.config.vmax # Want to plan reference trajectory with less than top speed 
         # so that there is room for the mpc solution tocatch up since it will likely 
         # have a slightly longer trajectory
         x_ref = []
@@ -113,12 +98,12 @@ class MpcModule:
         problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(c) \
                                                     .with_constraints(bounds)
         build_config = og.config.BuildConfiguration()\
-            .with_build_directory("python_test_build")\
+            .with_build_directory(self.config.build_directory)\
             .with_build_mode("debug")\
             .with_tcp_interface_config()
 
         meta = og.config.OptimizerMeta()\
-            .with_optimizer_name("navigation")
+            .with_optimizer_name(self.config.optimizer_name)
 
         solver_config = og.config.SolverConfiguration()\
                 .with_tolerance(1e-5)\
@@ -177,127 +162,42 @@ class MpcModule:
         plt.ylabel('angular velocity')
         plt.xlabel('Time')
     
-    def run(self,x_init, x_finish, node_list, circles, radius):
-        """
-        Parameters
-        ----------
-        x_init : TYPE list
-            DESCRIPTION. [x_start, y_start,theta_start]
-        x_finish : TYPE list
-            DESCRIPTION. [x_finish, y_finish,theta_finish]
-        node_list : TYPE list of tuples
-            DESCRIPTION. holds all nodes to visit not including initial condition
-        circles : TYPE list of lists
-            DESCRIPTION. holds circle coordinates and 
-        radius : TYPE double
-            DESCRIPTION. radius of constraint circles
+    def run(self, parameters, mng, take_steps, system_input, states):
 
-        Returns
-        -------
-        None.
+        solution = mng.call(parameters)
+        
+        
+        if solution.is_ok():
+            # Solver returned a solution
+            solution_data = solution.get()
+            u = solution_data.solution
+            exit_status = solution_data.exit_status
+            solver_time = solution_data.solve_time_ms
+        else:
+            # Invocation failed - an error report is returned
+            solver_error = solution.get()
+            error_code = solver_error.code
+            error_msg = solver_error.message
+            mng.kill() # kill so rust code wont keep running if python crashes
+            raise RuntimeError(f"MPC Solver error: {error_msg}")
 
-        """
-        # Use TCP server
-        # ------------------------------------
-        
-        x_ref,y_ref, theta_ref = self.rough_ref((x_init[0],x_init[1]), node_list)
-        
-        mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
-        mng.start()
-        mng.ping()
-
-        tt = time.time()
-        # take this amount of steps
-        #for t in range(0,len(x_ref),take_steps):     
-        system_input = []    
-        terminal = False
-        
-        
-        t=0
-        states = x_init
-        while(not terminal):   
+        for i in range(take_steps):
+            u_v = u[i*self.config.nu]
+            u_omega = u[1+i*self.config.nu]
             
-            #x_init = [x_ref[t], y_ref[t], theta_ref[t]]
-            x_init = states[-3:] # picks out current state for new initial state to solver
-            if(len(x_ref)-1 <= t+self.config.N_hor): 
-                take_steps = self.config.N_hor
-                terminal = True
-                x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
-            else:
-                take_steps = 5
-                x_finish = [x_ref[t+self.config.N_hor], y_ref[t+self.config.N_hor],
-                            theta_ref[t+self.config.N_hor]]
-                
-            parameters = x_init+x_finish+circles
-            solution = mng.call(parameters)
+            system_input.append(u_v)
+            system_input.append(u_omega)
             
             
-            if solution.is_ok():
-                # Solver returned a solution
-                solution_data = solution.get()
-                u = solution_data.solution
-                exit_status = solution_data.exit_status
-                solver_time = solution_data.solve_time_ms
-            else:
-                # Invocation failed - an error report is returned
-                solver_error = solution.get()
-                error_code = solver_error.code
-                error_msg = solver_error.message
-                mng.kill() # kill so rust code wont keep running if python crashes
-                print(error_msg)
-                return
-            
-            
-        
-            nx = self.config.nz//2 # nz is start and end state
+            x = states[-3]
+            y = states[-2]
+            theta = states[-1]
 
-            for i in range(take_steps):
-                u_v = u[i*self.config.nu]
-                u_omega = u[1+i*self.config.nu]
-                
-                system_input.append(u_v)
-                system_input.append(u_omega)
-                
-                
-                x = states[-3]
-                y = states[-2]
-                theta = states[-1]
+            states.append(x + self.config.ts * (u_v * math.cos(theta)))
+            states.append(y + self.config.ts * (u_v * math.sin(theta)))
+            states.append(theta + self.config.ts*u_omega)
 
-                states.append(x + self.config.ts * (u_v * cs.cos(theta)))
-                states.append(y + self.config.ts * (u_v * cs.sin(theta)))
-                states.append(theta + self.config.ts*u_omega)
-                
-                t = t+1 
-
-        
-        mng.kill()
-        
-        total_time = int(1000*(time.time()-tt))   
-        print("Total solution time: {} ms".format(total_time))
-        #print(f'Solution time: {solution["solve_time_ms"]}') # cant use this for receeding horizon
-        print(f'Exit status: {solution["exit_status"]}')
-
-
-        # Plot solution
-        # ------------------------------------
-        
-        xx = states[0:len(states):nx]
-        xy = states[1:len(states):nx]
-        uv = system_input[0:len(system_input):2]
-        uomega = system_input[1:len(system_input):2]
-        
-        plt.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
-        plt.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
-        plt.axis('equal')
-        plt.grid('on')
-        plt.legend()
-        
-        #plt.plot.figure()
-        #plt.plot(uv, c='b', label='velocity')
-        #plt.legend()
-        plt.show()    
-        
-        return xx,xy,uv,uomega    # uncomment if we want to return the traj
+        return exit_status, solver_time
 
     def get_values_test1(self):    
         # Use TCP server
@@ -307,8 +207,7 @@ class MpcModule:
 
         # ToDo add node_list in the input argument instead
         node_list = [(0,0),(3,3),(5,3),(8,1),(x_finish[0],x_finish[1])]
-
-        x_ref,y_ref, theta_ref = self.rough_ref((x_init[0],x_init[1]), node_list)  
+ 
         radius = 0.1
 
         self.obstacles = [[1, 1, radius],[0, -1, radius], [2, -1, radius],
