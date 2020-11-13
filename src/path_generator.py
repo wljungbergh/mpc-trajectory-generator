@@ -97,6 +97,7 @@ class PathGenerator:
                 if np.allclose(states[-3:],end,atol=0.1):
                     terminal = True
         except KeyboardInterrupt:
+            print("[MPC] killing TCP connection to MCP solver...")
             mng.kill()
             
 
