@@ -1,7 +1,7 @@
 import extremitypathfinder.extremitypathfinder as epf
 from extremitypathfinder.plotting import PlottingEnvironment, draw_prepared_map
 from extremitypathfinder.extremitypathfinder import PolygonEnvironment
-from graphs import Graphs
+from visibility.graphs import Graphs
 import pyclipper
 import math
 import numpy as np
@@ -33,7 +33,6 @@ def plot_verticies(verticies, radius,  ax):
 
 class Config:
     def __init__(self):
-        self.dt = 0.1
         self.omega_max = 1
         self.v_max = 1.5
         self.vehicle_width = 0.5
