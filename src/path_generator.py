@@ -63,38 +63,41 @@ class PathGenerator:
 
         system_input = []  
         states = start
-        while(not terminal):   
-            
-            x_init = states[-3:] # picks out current state for new initial state to solver
-            constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
-            constraints = [0.0] * self.config.Nobs*self.config.nobs
-            for i, origin in enumerate(constraint_origin):
-                constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-
-            if(len(x_ref)-1 <= t+self.config.N_hor): 
-                take_steps = self.config.N_hor
-                x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
-            else:
-                take_steps = 5
-                x_finish = [x_ref[t+self.config.N_hor], y_ref[t+self.config.N_hor],
-                            theta_ref[t+self.config.N_hor]]
+        try:
+            while(not terminal):   
                 
-            parameters = x_init+x_finish+constraints
-            try:
-                exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
-            except RuntimeError:
-                return
+                x_init = states[-3:] # picks out current state for new initial state to solver
+                constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
+                constraints = [0.0] * self.config.Nobs*self.config.nobs
+                for i, origin in enumerate(constraint_origin):
+                    constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
 
-            if exit_status in self.config.bad_exit_codes:
-                print(f"Bad converge status: {exit_status}")
-                ax.plot(states[0:-1:3], states[1:-1:3])
-                #plt.show()
-            
-            t += take_steps
-            total_solver_time += solver_time
+                if(len(x_ref)-1 <= t+self.config.N_hor): 
+                    take_steps = self.config.N_hor
+                    x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
+                else:
+                    take_steps = 5
+                    x_finish = [x_ref[t+self.config.N_hor], y_ref[t+self.config.N_hor],
+                                theta_ref[t+self.config.N_hor]]
+                    
+                parameters = x_init+x_finish+constraints
+                try:
+                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
+                except RuntimeError:
+                    return
 
-            if np.allclose(states[-3:],end,atol=0.1):
-                terminal = True
+                if exit_status in self.config.bad_exit_codes:
+                    print(f"Bad converge status: {exit_status}")
+                    ax.plot(states[0:-1:3], states[1:-1:3])
+                    #plt.show()
+                
+                t += take_steps
+                total_solver_time += solver_time
+
+                if np.allclose(states[-3:],end,atol=0.1):
+                    terminal = True
+        except KeyboardInterrupt:
+            mng.kill()
             
 
         mng.kill()
