@@ -60,12 +60,19 @@ class MpcModule:
             
         return x_ref, y_ref, theta_ref
     
+    def cost_fn(self, state_curr, state_ref):
+        dx = (state_curr[0] - state_ref[0])**2
+        dy = (state_curr[1] - state_ref[1])**2
+        dtheta = (state_curr[2] - state_ref[2])**2
+        cost = self.config.q*(dx + dy) + self.config.qtheta*dtheta
+        return cost
+        
     def build(self):
         # Build parametric optimizer
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz+self.config.Nobs*self.config.nobs+self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs)# + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
         (x, y, theta) = (z0[0], z0[1], z0[2])
         cost = 0
@@ -74,8 +81,9 @@ class MpcModule:
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
-            (xref , yref, thetaref) = (z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
-            cost += self.config.q*((x-xref)**2 + (y-yref)**2) + self.config.qtheta*(theta-thetaref)**2
+            state_ref = (z0[3], z0[4], z0[5])#(z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
+            state_curr = (x, y, theta)
+            cost += self.cost_fn(state_curr, state_ref)
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
