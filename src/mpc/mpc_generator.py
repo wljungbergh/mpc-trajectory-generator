@@ -13,7 +13,7 @@ class Config:
         self.N_hor = 10                    # lookahead
         self.nu = 2                            # decision per time steps
         self.nz = 6                            # number of states
-        self.nobs = 2                        # number of params per obstacle
+        self.nobs = 3                        # number of params per obstacle
         self.Nobs =  10                       # number of obstacles
         self.ts = ts                            # time step size
         self.vmax = 1.5
@@ -75,7 +75,7 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz+self.config.Nobs*self.config.nobs+1) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz+self.config.Nobs*self.config.nobs) #init + final position, obstacle params, circle radius
 
         (x, y, theta) = (z0[0], z0[1], z0[2])
         (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
@@ -90,15 +90,14 @@ class MpcModule:
             y += ts * (u_t[0] * cs.sin(theta))
             theta += ts * u_t[1]
 
-            xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:2]
-            ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:2]
+            xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+            ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+            rs = z0[self.config.nz+2:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
 
             xdiff = x-xs
             ydiff = y-ys
 
-            circ_radius = z0[self.config.nz+self.config.Nobs*self.config.nobs]
-
-            c+= cs.fmax(0, circ_radius**2-xdiff**2-ydiff**2)
+            c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
         cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
 
@@ -224,7 +223,7 @@ class MpcModule:
                 x_finish = [x_ref[t+self.config.N_hor], y_ref[t+self.config.N_hor],
                             theta_ref[t+self.config.N_hor]]
                 
-            parameters = x_init+x_finish+circles+[radius]
+            parameters = x_init+x_finish+circles
             solution = mng.call(parameters)
             
             
@@ -310,9 +309,9 @@ class MpcModule:
         self.obstacles = [[1, 1, radius],[0, -1, radius], [2, -1, radius],
                             [2, 1, radius],[-0.5, -0.2, radius]]
 
-        circles = [100.0] * (self.config.Nobs*self.config.nobs)
+        circles = [0.0] * (self.config.Nobs*self.config.nobs)
         for i, circ in enumerate(self.obstacles):
-            circles[i*self.config.nobs:(i+1)*self.config.nobs] = circ[0:2]
+            circles[i*self.config.nobs:(i+1)*self.config.nobs] = circ[0:self.config.nobs]
             
         return x_init, x_finish, node_list, circles, radius
 
