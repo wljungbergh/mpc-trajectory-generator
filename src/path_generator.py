@@ -79,8 +79,12 @@ class PathGenerator:
                     take_steps = 5
                     x_finish = [x_ref[t+self.config.N_hor], y_ref[t+self.config.N_hor],
                                 theta_ref[t+self.config.N_hor]]
-                    
-                parameters = x_init+x_finish+constraints
+                
+                refs = [0.0] * (self.config.N_hor * self.config.nx )
+                refs[0::self.config.nx] = x_ref[t:t+self.config.N_hor]
+                refs[1::self.config.nx] = y_ref[t:t+self.config.N_hor]
+                refs[2::self.config.nx] = theta_ref[t:t+self.config.N_hor]
+                parameters = x_init+x_finish+constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
                 except RuntimeError:
@@ -99,6 +103,7 @@ class PathGenerator:
         except KeyboardInterrupt:
             print("[MPC] killing TCP connection to MCP solver...")
             mng.kill()
+            return
             
 
         mng.kill()

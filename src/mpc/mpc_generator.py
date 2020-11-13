@@ -65,16 +65,18 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz+self.config.Nobs*self.config.nobs) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz+self.config.Nobs*self.config.nobs+self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
         (x, y, theta) = (z0[0], z0[1], z0[2])
-        (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
         cost = 0
         c = 0
+        base = self.config.nz+self.config.Nobs*self.config.nobs
 
-        for t in range(0, self.config.nu*self.config.N_hor, self.config.nu): # LOOP OVER TIME STEPS
+        for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
+            
+            (xref , yref, thetaref) = (z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
             cost += self.config.q*((x-xref)**2 + (y-yref)**2) + self.config.qtheta*(theta-thetaref)**2
-            u_t = u[t:t+self.config.nu]
+            u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
             y += self.config.ts * (u_t[0] * cs.sin(theta))
@@ -89,6 +91,7 @@ class MpcModule:
 
             c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
+        (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
         umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 

@@ -4,7 +4,7 @@ from visibility.graphs import Graphs
 import math
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=1)
+g = graphs.get_graph(complexity=0)
 
 path_gen = PathGenerator(build=False)
 start = list(g.start) + [math.radians(90)]
