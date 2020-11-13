@@ -31,6 +31,9 @@ def plot_vertices(vertices, radius,  ax):
         c = plt.Circle(vert, radius, color = 'r', alpha = 0.7)
         ax.add_artist(c)
     pass
+
+
+
 #########
 class Config:
     def __init__(self):
@@ -46,8 +49,6 @@ class PathPreProcessor:
             self.env = PlottingEnvironment(plotting_dir='plotted_paths')
         else: 
             self.env = PolygonEnvironment()
-
-        
 
     def prepare(self, graph_map):
 
@@ -149,14 +150,20 @@ class PathPreProcessor:
         # return self.vert.copy()[:n_vertices]
         ######
 
-
-
+    def plot_all(self, ax):
+        plot_boundaries(self.original_boundary_coordinates, ax, c='k')
+        plot_boundaries(self.processed_boundary_coordinates, ax, c='g')
+        plot_obstacles(ppp.original_obstacle_list, c='r', ax = ax)
+        plot_obstacles(self.processed_obstacle_list,c='b', ax = ax)
+        plot_path(self.path, c='-ok', ax = ax)
+        plot_vertices(self.vert, radius = ppp.config.vehicle_width, ax = ax)
+    
 
 if __name__ == '__main__':
 
     graphs = Graphs()
 
-    g = graphs.get_graph(complexity=2)
+    g = graphs.get_graph(complexity=0)
     config = Config()
     ppp = PathPreProcessor(config, plotting = False)
     ppp.prepare(g)
@@ -164,12 +171,9 @@ if __name__ == '__main__':
     vert = ppp.find_closest_vertices(g.end)
 
     fig, ax = plt.subplots()
-    plot_boundaries(ppp.original_boundary_coordinates, ax, c='k')
-    plot_boundaries(ppp.processed_boundary_coordinates, ax, c='g')
-    plot_obstacles(ppp.original_obstacle_list, c='r', ax = ax)
-    plot_obstacles(ppp.processed_obstacle_list,c='b', ax = ax)
-    plot_path(path, c='-ok', ax = ax)
-    plot_vertices(vertices, radius = ppp.config.vehicle_width, ax = ax)
+    
+    
+    
     plt.axis('equal')
     plt.show()
     
