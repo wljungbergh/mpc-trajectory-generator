@@ -74,10 +74,18 @@ class PathPreProcessor:
             end_pos (tuple): tuple containing x and y position for end position
 
         Returns:
-            path, dist: path is a list of coordinates linearly connected which is the inital guess, and dist is the distance of the inital guess 
-        """
+            path ([tuples]) : a list of coordinates that together becomes the inital path. These points lies on extremities of the padded obstacles 
+            verticies ([tuples]) : a list of the verticies on the original (unpadded) obstacles corresponding to the verticies in path
+            
+            """
         path, distance = self.env.find_shortest_path(start_pos, end_pos)
-        return path, distance
+        verticies = self.find_original_verticies(path)
+
+        self.path = path
+        self.vert = verticies
+        self.vert_copy = verticies.copy()
+
+        return path, verticies
 
     def preprocess_obstacle(self, obstacle, inflation, boundary = False):
         self.inflator.Clear()
@@ -96,6 +104,23 @@ class PathPreProcessor:
 
         return inflated_obstacles
     
+    @staticmethod
+    def dist_between_points(p1, p2):
+        return np.linalg.norm((np.asarray(p1) - np.asarray(p2)), ord = 2)
+    
+    def get_closest_vert(self, vert, list_to_compare):
+        best_vert = ()
+        best_dist = 10e3
+        best_idx = 0
+        for idx, ref_vert in enumerate(list_to_compare):
+            dist = self.dist_between_points(vert, ref_vert)
+            if dist < best_dist: 
+                best_dist = dist
+                best_idx = idx
+                best_vert = ref_vert
+
+        return best_vert, best_idx
+        
     def find_original_verticies(self, path):
         verticies = []
         if not (len(path) > 2):
@@ -106,28 +131,34 @@ class PathPreProcessor:
 
         all_vert_flat = [item for sublist in all_vert for item in sublist]
         for vert in path[1:-1]: # dont use start and final positions as contstraints
-            best_vert = ()
-            best_dist = 10e3
-            for ref_vert in all_vert_flat:
-                dist = np.linalg.norm((np.asarray(vert) - np.asarray(ref_vert)), ord = 2)
-                if dist < best_dist: 
-                    best_dist = dist
-                    best_vert = ref_vert
-            
-            verticies.append(best_vert)
+            closest_vert, _ = self.get_closest_vert(vert, all_vert_flat)
+            verticies.append(closest_vert)
 
         return verticies
     
+    def find_closest_verticies(self, current_pos, n_verticies = 10, N_STEPS_LOOK_BACK = 2):
+        _, idx = self.get_closest_vert(current_pos, self.vert)
+        lb = max(0, idx - N_STEPS_LOOK_BACK) # look two objects behind 
+        ub = min(len(self.vert), n_verticies - N_STEPS_LOOK_BACK)
+        return self.vert[lb:ub].copy()
+
+        ###### If one wants to use euclidian distance instead.
+        # self.vert_copy.sort(key = lambda x: self.dist_between_points(current_pos, x))
+        # return self.vert.copy()[:n_verticies]
+        ######
+
+
+
 
 if __name__ == '__main__':
 
     graphs = Graphs()
 
-    g = graphs.get_graph(complexity=0)
+    g = graphs.get_graph(complexity=2)
 
     ppp = PathPreProcessor(g.boundary_coordinates, g.obstacle_list, plotting = False)
-    path, _ = ppp.get_initial_guess(g.start, g.end)
-    verticies = ppp.find_original_verticies(path)
+    path, verticies = ppp.get_initial_guess(g.start, g.end)
+    vert = ppp.find_closest_verticies(g.end)
 
     fig, ax = plt.subplots()
     plot_boundaries(ppp.original_boundary_coordinates, ax, c='k')
