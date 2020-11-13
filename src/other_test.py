@@ -157,8 +157,6 @@ class MpcModule:
         # Use TCP server
         # ------------------------------------
         x_init = [-2.0, -2.0, math.pi/4]
-
-        #x_finish = [2.0, 2.0, math.pi/4]
         x_finish = [15, 15, math.pi/4]
         
         # ToDo add node_list in the input argument instead
@@ -167,7 +165,6 @@ class MpcModule:
         x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)  
         radius = 0.1
         
-
         self.obstacles = [[1, 1, radius],[0, -1, radius], [2, -1, radius],
                           [2, 1, radius],[-0.5, -0.2, radius]]
         
@@ -202,15 +199,17 @@ class MpcModule:
         
         x_ref,y_ref, theta_ref = rough_ref((x_init[0],x_init[1]), node_list,ts,vmax)
         
-
         mng = og.tcp.OptimizerTcpManager('python_test_build/navigation')
         mng.start()
         mng.ping()
 
         tt = time.time()
         # take this amount of steps
-        #for t in range(0,len(x_ref),take_steps):
+        #for t in range(0,len(x_ref),take_steps):     
+        system_input = []    
         terminal = False
+        
+        
         t=0
         states = x_init
         while(not terminal):   
@@ -253,6 +252,9 @@ class MpcModule:
                 u_v = u[i*nu]
                 u_omega = u[1+i*nu]
                 
+                system_input.append(u_v)
+                system_input.append(u_omega)
+                
                 
                 x = states[-3]
                 y = states[-2]
@@ -278,18 +280,21 @@ class MpcModule:
         
         xx = states[0:len(states):nx]
         xy = states[1:len(states):nx]
+        uv = system_input[0:len(system_input):2]
+        uomega = system_input[1:len(system_input):2]
         
+        #plt.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        #plt.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
+        #plt.axis('equal')
+        #plt.grid('on')
+        #plt.legend()
         
-        plt.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        #plt.plot.figure()
+        #plt.plot(uv, c='b', label='velocity')
+        #plt.legend()
+        #plt.show()    
         
-        plt.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
-        
-        plt.axis('equal')
-        plt.grid('on')
-        plt.legend()
-        plt.show()    
-        
-        #return xx,xy    # uncomment if we want to return the traj
+        return xx,xy,uv,uomega    # uncomment if we want to return the traj
         
         
 
@@ -320,7 +325,7 @@ if __name__ == '__main__':
     if do_run:
         # Run with test case
         x_init, x_finish, node_list, circles, radius = mpc_module.get_values_test1()
-        mpc_module.run(x_init, x_finish, node_list, circles, radius)
+        xx,xy,uv,uomega = mpc_module.run(x_init, x_finish, node_list, circles, radius)
         
     
 
