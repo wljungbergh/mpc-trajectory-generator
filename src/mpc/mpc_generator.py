@@ -15,10 +15,15 @@ class Config:
         self.nz = 6                            # number of states
         self.nobs = 3                        # number of params per obstacle
         self.Nobs =  10                       # number of obstacles
-        self.ts = ts                            # time step size
+        self.ts = 0.2                            # time step size
         self.vmax = 1.5
         self.omega_max = 0.5
-
+        self.q = 1
+        self.qtheta = 1
+        self.rv = 10
+        self.rw = 10
+        self.qN = 200
+        self.qthetaN = 10
 
 class MpcModule:
 
@@ -83,12 +88,12 @@ class MpcModule:
         c = 0
 
         for t in range(0, self.config.nu*self.config.N_hor, self.config.nu): # LOOP OVER TIME STEPS
-            cost += q*((x-xref)**2 + (y-yref)**2) + qtheta*(theta-thetaref)**2
-            u_t = u[t:t+nu]
-            cost += rv * u_t[0]**2 + rw * u_t[1] ** 2
-            x += ts * (u_t[0] * cs.cos(theta))
-            y += ts * (u_t[0] * cs.sin(theta))
-            theta += ts * u_t[1]
+            cost += self.config.q*((x-xref)**2 + (y-yref)**2) + self.config.qtheta*(theta-thetaref)**2
+            u_t = u[t:t+self.config.nu]
+            cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
+            x += self.config.ts * (u_t[0] * cs.cos(theta))
+            y += self.config.ts * (u_t[0] * cs.sin(theta))
+            theta += self.config.ts * u_t[1]
 
             xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
             ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
@@ -99,10 +104,10 @@ class MpcModule:
 
             c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
-        cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
+        cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
-        umin = [-self.config.vmax,-self.config.omega_max] *N 
-        umax = [self.config.vmax, self.config.omega_max] *N  
+        umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
+        umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
         bounds = og.constraints.Rectangle(umin, umax)
 
         problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(c) \
@@ -260,7 +265,7 @@ class MpcModule:
 
                 states.append(x + self.config.ts * (u_v * cs.cos(theta)))
                 states.append(y + self.config.ts * (u_v * cs.sin(theta)))
-                states.append(theta + ts*u_omega)
+                states.append(theta + self.config.ts*u_omega)
                 
                 t = t+1 
 
@@ -319,10 +324,6 @@ class MpcModule:
 if __name__ == '__main__':
     do_build = False
     do_run = True
-    (nu, nz, N) = (2, 6, 10) # v and w decision, 3 init and 3 end positions as parameter, 30 time steps
-    (nobs, Nobs) = (2, MAX_NUMBER_OF_OBSTACLES) # x,y for each circle
-    ts = 0.2
-    (q, qtheta, rv, rw, qN, qthetaN) = (1, 1, 10, 10, 200, 10)
     
     config = Config()
     mpc_module = MpcModule(config)
