@@ -1,13 +1,14 @@
 import extremitypathfinder.extremitypathfinder as epf
 from extremitypathfinder.plotting import PlottingEnvironment, draw_prepared_map
 from extremitypathfinder.extremitypathfinder import PolygonEnvironment
-from visibility.graphs import Graphs
+from graphs import Graphs
 import pyclipper
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
+# Helper functions 
 def plot_obstacles(obstacle_list, c, ax):
     for obstacle in obstacle_list:
         for i in range(len(obstacle) - 1):
@@ -25,21 +26,19 @@ def plot_path(path, c, ax):
     for i in range(len(path)-1):
         ax.plot([path[i][0], path[i+1][0]],[path[i][1], path[i+1][1]],c)
 
-def plot_verticies(verticies, radius,  ax):
-    for vert in verticies:
+def plot_vertices(vertices, radius,  ax):
+    for vert in vertices:
         c = plt.Circle(vert, radius, color = 'r', alpha = 0.7)
         ax.add_artist(c)
     pass
-
+#########
 class Config:
     def __init__(self):
-        self.omega_max = 1
-        self.v_max = 1.5
         self.vehicle_width = 0.5
 
 
 class PathPreProcessor:
-    def __init__(self, boundary_coordinates, obstacle_list, padding_distance = 0.25, plotting = False, config = Config()):
+    def __init__(self, config, plotting = False):
         self.config = config
         self.inflator = pyclipper.PyclipperOffset()
                 # Define environment based on wheter or not to plot
@@ -48,15 +47,19 @@ class PathPreProcessor:
         else: 
             self.env = PolygonEnvironment()
 
+        
+
+    def prepare(self, graph_map):
+
         # Obstacles
-        self.original_obstacle_list = obstacle_list.copy()
+        self.original_obstacle_list = graph_map.obstacle_list.copy()
         # Pre-proccess obstacles
-        self.processed_obstacle_list = self.preprocess_obstacles(obstacle_list)
+        self.processed_obstacle_list = self.preprocess_obstacles(graph_map.obstacle_list)
         # Boundary
-        self.original_boundary_coordinates = boundary_coordinates.copy()
+        self.original_boundary_coordinates = graph_map.boundary_coordinates.copy()
         # Pre-process boundaries
         self.processed_boundary_coordinates = self.preprocess_obstacle(
-                                                pyclipper.scale_to_clipper(boundary_coordinates), 
+                                                pyclipper.scale_to_clipper(graph_map.boundary_coordinates), 
                                                 pyclipper.scale_to_clipper(-self.config.vehicle_width))
 
         # Give obstacles and boundaries to environment
@@ -74,17 +77,17 @@ class PathPreProcessor:
 
         Returns:
             path ([tuples]) : a list of coordinates that together becomes the inital path. These points lies on extremities of the padded obstacles 
-            verticies ([tuples]) : a list of the verticies on the original (unpadded) obstacles corresponding to the verticies in path
+            vertices ([tuples]) : a list of the vertices on the original (unpadded) obstacles corresponding to the vertices in path
             
             """
         path, distance = self.env.find_shortest_path(start_pos, end_pos)
-        verticies = self.find_original_verticies(path)
+        vertices = self.find_original_vertices(path)
 
         self.path = path
-        self.vert = verticies
-        self.vert_copy = verticies.copy()
+        self.vert = vertices
+        self.vert_copy = vertices.copy()
 
-        return path, verticies
+        return path, vertices
 
     def preprocess_obstacle(self, obstacle, inflation, boundary = False):
         self.inflator.Clear()
@@ -120,30 +123,30 @@ class PathPreProcessor:
 
         return best_vert, best_idx
         
-    def find_original_verticies(self, path):
-        verticies = []
+    def find_original_vertices(self, path):
+        vertices = []
         if not (len(path) > 2):
-           print('[INFO] Path is only one line. No verticies to find.') 
-           return verticies
+           print('[INFO] Path is only one line. No vertices to find.') 
+           return vertices
 
         all_vert = self.original_obstacle_list + [self.original_boundary_coordinates]
 
         all_vert_flat = [item for sublist in all_vert for item in sublist]
         for vert in path[1:-1]: # dont use start and final positions as contstraints
             closest_vert, _ = self.get_closest_vert(vert, all_vert_flat)
-            verticies.append(closest_vert)
+            vertices.append(closest_vert)
 
-        return verticies
+        return vertices
     
-    def find_closest_verticies(self, current_pos, n_verticies = 10, N_STEPS_LOOK_BACK = 2):
+    def find_closest_vertices(self, current_pos, n_vertices = 10, N_STEPS_LOOK_BACK = 2):
         _, idx = self.get_closest_vert(current_pos, self.vert)
         lb = max(0, idx - N_STEPS_LOOK_BACK) # look two objects behind 
-        ub = min(len(self.vert), n_verticies - N_STEPS_LOOK_BACK)
+        ub = min(len(self.vert), n_vertices - N_STEPS_LOOK_BACK)
         return self.vert[lb:ub].copy()
 
         ###### If one wants to use euclidian distance instead.
         # self.vert_copy.sort(key = lambda x: self.dist_between_points(current_pos, x))
-        # return self.vert.copy()[:n_verticies]
+        # return self.vert.copy()[:n_vertices]
         ######
 
 
@@ -154,10 +157,11 @@ if __name__ == '__main__':
     graphs = Graphs()
 
     g = graphs.get_graph(complexity=2)
-
-    ppp = PathPreProcessor(g.boundary_coordinates, g.obstacle_list, plotting = False)
-    path, verticies = ppp.get_initial_guess(g.start, g.end)
-    vert = ppp.find_closest_verticies(g.end)
+    config = Config()
+    ppp = PathPreProcessor(config, plotting = False)
+    ppp.prepare(g)
+    path, vertices = ppp.get_initial_guess(g.start, g.end)
+    vert = ppp.find_closest_vertices(g.end)
 
     fig, ax = plt.subplots()
     plot_boundaries(ppp.original_boundary_coordinates, ax, c='k')
@@ -165,7 +169,7 @@ if __name__ == '__main__':
     plot_obstacles(ppp.original_obstacle_list, c='r', ax = ax)
     plot_obstacles(ppp.processed_obstacle_list,c='b', ax = ax)
     plot_path(path, c='-ok', ax = ax)
-    plot_verticies(verticies, radius = ppp.config.vehicle_width, ax = ax)
+    plot_vertices(vertices, radius = ppp.config.vehicle_width, ax = ax)
     plt.axis('equal')
     plt.show()
     
