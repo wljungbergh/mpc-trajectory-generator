@@ -79,21 +79,6 @@ class MpcModule:
         c = 0
         # Index where reference points start
         base = self.config.nz+self.config.Nobs*self.config.nobs
-        # Initialize first point of line being initial position
-        V = cs.vertcat(x,y)
-        # Initialize set of normalized line vectors
-        W = cs.vertcat(z0[base], z0[base+1])
-        ui = (V-W)/(cs.sqrt((cs.mtimes(cs.transpose(V-W),V-W)))+1e-16)
-        V = W
-
-        for i in range(1, self.config.N_hor):
-            W = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
-            U = (V-W)/(cs.sqrt((cs.mtimes(cs.transpose(V-W),V-W)))+1e-16)
-            ui = cs.horzcat(ui, U)
-            # Set start point of next line as end of this line
-            V = W
-        
-        ui = ui[:,1:]
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
@@ -117,12 +102,21 @@ class MpcModule:
 
             # Initialize list with CTE to all line segments
             distances = cs.SX.ones(1)
-            for i in range(0, self.config.N_hor-1):
-                # End point of line segment
-                W = cs.vertcat(z0[base+(i+1)*self.config.nx], z0[base+(i+1)*self.config.nx+1])
-                # Projection matrix
-                P = cs.SX.eye(2)-cs.mtimes(ui[:,i],cs.transpose(ui[:,i]))
-                temp_vec = cs.mtimes(P,cs.vertcat(x,y)) - cs.mtimes(P,W)
+            s2 = cs.vertcat(z0[base], z0[base+1])
+            for i in range(1, self.config.N_hor):
+                # set start point as previous end point
+                s1 = s2
+                # new end point
+                s2 = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
+                # our current point
+                p = cs.vertcat(x,y)
+                # line segment
+                s2s1 = s2-s1
+                # t_hat
+                t_hat = cs.dot(p-s1,s2s1)/(s2s1[0]**2+s2s1[1]**2+1e-16)
+                # limit t
+                t_star = cs.fmin(cs.fmax(t_hat,0.0),1.0)
+                temp_vec = s1 + t_star*s2s1 - p
                 distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
                 '''print("----------------------")
                 print(f"t: {t}")
