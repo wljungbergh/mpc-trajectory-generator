@@ -119,7 +119,7 @@ class MpcModule:
             distances = cs.SX.ones(1)
             for i in range(0, self.config.N_hor-1):
                 # End point of line segment
-                W = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
+                W = cs.vertcat(z0[base+(i+1)*self.config.nx], z0[base+(i+1)*self.config.nx+1])
                 # Projection matrix
                 P = cs.SX.eye(2)-cs.mtimes(ui[:,i],cs.transpose(ui[:,i]))
                 temp_vec = cs.mtimes(P,cs.vertcat(x,y)) - cs.mtimes(P,W)
