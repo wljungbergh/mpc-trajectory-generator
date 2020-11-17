@@ -50,7 +50,7 @@ class PathGenerator:
 
         fig, ax = plt.subplots()
         self.ppp.plot_all(ax)
-        ax.plot(x_ref, y_ref)
+        ax.plot(x_ref, y_ref, label='Rough ref')
 
         
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
@@ -63,8 +63,9 @@ class PathGenerator:
 
         system_input = []  
         states = start
+        ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
         try:
-            while (not terminal) or t > 10000:  
+            while (not terminal) and t < 10000:  
                 
                 x_init = states[-3:] # picks out current state for new initial state to solver
                 
@@ -75,26 +76,38 @@ class PathGenerator:
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
 
                 # Take out final reference point
-                if (len(x_ref)-1 <= t+self.config.N_hor): 
+                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
+                if (idx+self.config.N_hor >= len(x_ref)): 
                     take_steps = self.config.N_hor
                     x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
+                    tmp = min(len(x_ref)-1, idx)
+                    tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
+                    tmpy = y_ref[tmp:] + [end[1]] * (self.config.N_hor - (len(y_ref)-tmp))
+                    tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
+                    
                 else:
-                    take_steps = 5
-                    x_finish = [x_ref[t+self.config.N_hor],
-                                y_ref[t+self.config.N_hor],
-                                theta_ref[t+self.config.N_hor]]
+                    take_steps = 20
+                    x_finish = [x_ref[idx+self.config.N_hor],
+                                y_ref[idx+self.config.N_hor],
+                                theta_ref[idx+self.config.N_hor]]
+
+                    tmpx = x_ref[idx:idx+self.config.N_hor]
+                    tmpy = y_ref[idx:idx+self.config.N_hor]
+                    tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
                  
 
                 refs = [0.0] * (self.config.N_hor * self.config.nx)
-                #refs[0::self.config.nx] = tmpx
-                #refs[1::self.config.nx] = tmpy
-                #refs[2::self.config.nx] = tmpy
+                refs[0::self.config.nx] = tmpx
+                refs[1::self.config.nx] = tmpy
+                refs[2::self.config.nx] = tmpt
             
-                parameters = x_init+x_finish+constraints#+refs
+                parameters = x_init+x_finish+constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
-                except RuntimeError:
+                except RuntimeError as err:
+                    print(err)
+                    mng.kill()
                     return
 
                 if exit_status in self.config.bad_exit_codes:
@@ -105,7 +118,7 @@ class PathGenerator:
                 t += take_steps
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:],end,atol=1):
+                if np.allclose(states[-3:-1],end[0:2],atol=0.01,rtol=0):
                     terminal = True
                 
         except KeyboardInterrupt:
@@ -134,10 +147,12 @@ class PathGenerator:
         plt.axis('equal')
         plt.grid('on')
         plt.legend()
+        plt.show()
         
-        #plt.plot.figure()
-        #plt.plot(uv, c='b', label='velocity')
-        #plt.legend()
+        plt.figure()
+        plt.plot(uv, c='b', label='velocity')
+        plt.plot(uomega, c='r', label='omega')
+        plt.legend()
         plt.show()    
         
         return xx,xy,uv,uomega    # uncomment if we want to return the traj

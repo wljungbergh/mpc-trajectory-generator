@@ -72,18 +72,34 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs)# + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
         (x, y, theta) = (z0[0], z0[1], z0[2])
         cost = 0
         c = 0
+        # Index where reference points start
         base = self.config.nz+self.config.Nobs*self.config.nobs
+        # Initialize first point of line being initial position
+        V = cs.vertcat(x,y)
+        # Initialize set of normalized line vectors
+        W = cs.vertcat(z0[base], z0[base+1])
+        ui = (V-W)/(cs.sqrt((cs.mtimes(cs.transpose(V-W),V-W)))+1e-16)
+        V = W
+
+        for i in range(1, self.config.N_hor):
+            W = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
+            U = (V-W)/(cs.sqrt((cs.mtimes(cs.transpose(V-W),V-W)))+1e-16)
+            ui = cs.horzcat(ui, U)
+            # Set start point of next line as end of this line
+            V = W
+        
+        ui = ui[:,1:]
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
-            state_ref = (z0[3], z0[4], z0[5])#(z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
-            state_curr = (x, y, theta)
-            cost += self.cost_fn(state_curr, state_ref)
+            #state_ref = (z0[3], z0[4], z0[5])#(z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
+            #state_curr = (x, y, theta)
+            #cost += self.cost_fn(state_curr, state_ref)
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
@@ -99,10 +115,28 @@ class MpcModule:
 
             c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
+            # Initialize list with CTE to all line segments
+            distances = cs.SX.ones(1)
+            for i in range(0, self.config.N_hor-1):
+                # End point of line segment
+                W = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
+                # Projection matrix
+                P = cs.SX.eye(2)-cs.mtimes(ui[:,i],cs.transpose(ui[:,i]))
+                temp_vec = cs.mtimes(P,cs.vertcat(x,y)) - cs.mtimes(P,W)
+                distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
+                '''print("----------------------")
+                print(f"t: {t}")
+                print(f"W: {W}")
+                print(f"P: {P}")
+                print(f"temp_vec: {temp_vec}")
+                print(f"distances: {distances}")'''
+
+            cost += cs.mmin(distances[1:])*self.config.qCTE
+
         (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
-        umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
+        umin = [0,-self.config.omega_max] * self.config.N_hor 
         umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
         bounds = og.constraints.Rectangle(umin, umax)
 

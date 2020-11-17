@@ -5,7 +5,7 @@ import math
 graphs = Graphs()
 g = graphs.get_graph(complexity=2)
  
-path_gen = PathGenerator(build=False)
+path_gen = PathGenerator(build=True)
 start = list(g.start) + [math.radians(0)]
 end = list(g.end) + [math.radians(0)]
 path_gen.run(g, start, end)
