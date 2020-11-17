@@ -78,7 +78,6 @@ class PathGenerator:
                 # Take out final reference point
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
                 if (idx+self.config.N_hor >= len(x_ref)): 
-                    take_steps = self.config.N_hor
                     x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
                     tmp = min(len(x_ref)-1, idx)
                     tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
@@ -86,7 +85,6 @@ class PathGenerator:
                     tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
                     
                 else:
-                    take_steps = 8
                     x_finish = [x_ref[idx+self.config.N_hor],
                                 y_ref[idx+self.config.N_hor],
                                 theta_ref[idx+self.config.N_hor]]
@@ -101,10 +99,15 @@ class PathGenerator:
                 refs[0::self.config.nx] = tmpx
                 refs[1::self.config.nx] = tmpy
                 refs[2::self.config.nx] = tmpt
-            
-                parameters = x_init+x_finish+constraints+refs
+
+                if len(system_input):
+                    last_u = system_input[-self.config.nu:]
+                else:
+                    last_u = [0.0] * self.config.nu
+
+                parameters = x_init+last_u+x_finish+last_u+constraints+refs
                 try:
-                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
+                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
                     print(err)
                     mng.kill()
@@ -115,7 +118,6 @@ class PathGenerator:
                     ax.plot(states[0:-1:3], states[1:-1:3])
                     #plt.show()
                 
-                t += take_steps
                 total_solver_time += solver_time
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.01,rtol=0):
@@ -136,7 +138,7 @@ class PathGenerator:
 
         # Plot solution
         # ------------------------------------
-        nx = self.config.nz//2
+        nx = self.config.nx
         xx = states[0:len(states):nx]
         xy = states[1:len(states):nx]
         uv = system_input[0:len(system_input):2]

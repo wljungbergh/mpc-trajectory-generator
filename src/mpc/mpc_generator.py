@@ -74,9 +74,9 @@ class MpcModule:
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
         z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
-        (x, y, theta) = (z0[0], z0[1], z0[2])
+        (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         cost = 0
-        c = 0
+        obstacle_constraints = 0
         # Index where reference points start
         base = self.config.nz+self.config.Nobs*self.config.nobs
 
@@ -98,7 +98,7 @@ class MpcModule:
             xdiff = x-xs
             ydiff = y-ys
 
-            c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
+            obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
             # Initialize list with CTE to all line segments
             # https://math.stackexchange.com/questions/330269/the-distance-from-a-point-to-a-line-segment
@@ -124,15 +124,27 @@ class MpcModule:
 
             cost += cs.mmin(distances[1:])*self.config.qCTE
 
-        (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
+        (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
-        umin = [0,-self.config.omega_max] * self.config.N_hor 
+        umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
         umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
         bounds = og.constraints.Rectangle(umin, umax)
 
-        problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(c) \
-                                                    .with_constraints(bounds)
+        v = u[0::2]
+        omega = u[1::2]
+        acc = (v-cs.vertcat(vel_init, v[0:-1]))/self.config.ts
+        omega_acc = (omega-cs.vertcat(omega_init, omega[0:-1]))/self.config.ts
+        acc_constraints = cs.vertcat(acc, omega_acc)
+        acc_min = [self.config.acc_min] * self.config.N_hor 
+        omega_min = [-self.config.omega_acc_max] * self.config.N_hor
+        acc_max = [self.config.acc_max] * self.config.N_hor
+        omega_max = [self.config.omega_acc_max] * self.config.N_hor
+        acc_bounds = og.constraints.Rectangle(acc_min + omega_min, acc_max + omega_max)
+
+        problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(obstacle_constraints) \
+                                                    .with_constraints(bounds) \
+                                                    .with_aug_lagrangian_constraints(acc_constraints, acc_bounds)
         build_config = og.config.BuildConfiguration()\
             .with_build_directory(self.config.build_directory)\
             .with_build_mode("debug")\
