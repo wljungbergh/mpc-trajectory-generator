@@ -101,6 +101,7 @@ class MpcModule:
             c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
             # Initialize list with CTE to all line segments
+            # https://math.stackexchange.com/questions/330269/the-distance-from-a-point-to-a-line-segment
             distances = cs.SX.ones(1)
             s2 = cs.vertcat(z0[base], z0[base+1])
             for i in range(1, self.config.N_hor):
@@ -116,14 +117,10 @@ class MpcModule:
                 t_hat = cs.dot(p-s1,s2s1)/(s2s1[0]**2+s2s1[1]**2+1e-16)
                 # limit t
                 t_star = cs.fmin(cs.fmax(t_hat,0.0),1.0)
+                # vector pointing from us to closest point
                 temp_vec = s1 + t_star*s2s1 - p
+                # append distance
                 distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
-                '''print("----------------------")
-                print(f"t: {t}")
-                print(f"W: {W}")
-                print(f"P: {P}")
-                print(f"temp_vec: {temp_vec}")
-                print(f"distances: {distances}")'''
 
             cost += cs.mmin(distances[1:])*self.config.qCTE
 

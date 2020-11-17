@@ -86,7 +86,7 @@ class PathGenerator:
                     tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
                     
                 else:
-                    take_steps = 7
+                    take_steps = 8
                     x_finish = [x_ref[idx+self.config.N_hor],
                                 y_ref[idx+self.config.N_hor],
                                 theta_ref[idx+self.config.N_hor]]
