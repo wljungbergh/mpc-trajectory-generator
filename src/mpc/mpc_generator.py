@@ -135,6 +135,8 @@ class MpcModule:
         omega = u[1::2]
         acc = (v-cs.vertcat(vel_init, v[0:-1]))/self.config.ts
         omega_acc = (omega-cs.vertcat(omega_init, omega[0:-1]))/self.config.ts
+        cost += cs.mtimes(acc.T,acc)*self.config.acc_penalty
+        cost += cs.mtimes(omega_acc.T,omega_acc)*self.config.omega_acc_penalty
         acc_constraints = cs.vertcat(acc, omega_acc)
         acc_min = [self.config.acc_min] * self.config.N_hor 
         omega_min = [-self.config.omega_acc_max] * self.config.N_hor

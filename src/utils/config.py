@@ -26,6 +26,8 @@ class Config:
         self.qN = 0.1
         self.qthetaN = 0
         self.qCTE = 0.5
+        self.acc_penalty = 0.5
+        self.omega_acc_penalty = 0.5
         self.num_steps_taken = 10
         self.throttle_ratio = 0.9
         self.build_directory = 'mpc_build'
