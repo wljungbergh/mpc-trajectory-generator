@@ -185,18 +185,21 @@ class MpcModule:
         z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
+        (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
         base = self.config.nz+self.config.Nobs*self.config.nobs
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
-
+            
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
             y += self.config.ts * (u_t[0] * cs.sin(theta))
             theta += self.config.ts * u_t[1]
+
+            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref))
 
             xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
             ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
@@ -233,7 +236,7 @@ class MpcModule:
             cost += cs.mmin(distances[1:])*self.config.qCTE
 
 
-        (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
+        
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
         # Max speeds 
