@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 graphs = Graphs()
 g = graphs.get_graph(complexity=2)
  
+
 path_gen = PathGenerator(build=False)
 start = list(g.start) + [math.radians(45)]
 end = list(g.end) + [math.radians(270)]

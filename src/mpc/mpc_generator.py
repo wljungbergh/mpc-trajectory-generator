@@ -72,18 +72,16 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs)# + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
 
-        (x, y, theta) = (z0[0], z0[1], z0[2])
+        (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         cost = 0
-        c = 0
+        obstacle_constraints = 0
+        # Index where reference points start
         base = self.config.nz+self.config.Nobs*self.config.nobs
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
-            
-            state_ref = (z0[3], z0[4], z0[5]) #(z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
-            state_curr = (x, y, theta)
-            cost += self.cost_fn(state_curr, state_ref)
+
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
@@ -97,17 +95,63 @@ class MpcModule:
             xdiff = x-xs
             ydiff = y-ys
 
-            c+= cs.fmax(0, rs**2-xdiff**2-ydiff**2)
+            obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
-        (xref , yref, thetaref) = (z0[3], z0[4], z0[5])
+            # our current point
+            p = cs.vertcat(x,y)
+
+            # Initialize list with CTE to all line segments
+            # https://math.stackexchange.com/questions/330269/the-distance-from-a-point-to-a-line-segment
+            distances = cs.SX.ones(1)
+            s2 = cs.vertcat(z0[base], z0[base+1])
+            for i in range(1, self.config.N_hor):
+                # set start point as previous end point
+                s1 = s2
+                # new end point
+                s2 = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
+                # line segment
+                s2s1 = s2-s1
+                # t_hat
+                t_hat = cs.dot(p-s1,s2s1)/(s2s1[0]**2+s2s1[1]**2+1e-16)
+                # limit t
+                t_star = cs.fmin(cs.fmax(t_hat,0.0),1.0)
+                # vector pointing from us to closest point
+                temp_vec = s1 + t_star*s2s1 - p
+                # append distance
+                distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
+
+            cost += cs.mmin(distances[1:])*self.config.qCTE
+
+
+        (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
+        # Max speeds 
         umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
         umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
         bounds = og.constraints.Rectangle(umin, umax)
 
-        problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(c) \
-                                                    .with_constraints(bounds)
+        # Acceleration bounds and cost
+        # Selected velocities
+        v = u[0::2]
+        omega = u[1::2]
+        # Accelerations
+        acc = (v-cs.vertcat(vel_init, v[0:-1]))/self.config.ts
+        omega_acc = (omega-cs.vertcat(omega_init, omega[0:-1]))/self.config.ts
+        acc_constraints = cs.vertcat(acc, omega_acc)
+        # Acceleration bounds
+        acc_min = [self.config.acc_min] * self.config.N_hor 
+        omega_min = [-self.config.omega_acc_max] * self.config.N_hor
+        acc_max = [self.config.acc_max] * self.config.N_hor
+        omega_max = [self.config.omega_acc_max] * self.config.N_hor
+        acc_bounds = og.constraints.Rectangle(acc_min + omega_min, acc_max + omega_max)
+        # Accelerations cost
+        cost += cs.mtimes(acc.T,acc)*self.config.acc_penalty
+        cost += cs.mtimes(omega_acc.T,omega_acc)*self.config.omega_acc_penalty
+
+        problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(obstacle_constraints) \
+                                                    .with_constraints(bounds) \
+                                                    .with_aug_lagrangian_constraints(acc_constraints, acc_bounds)
         build_config = og.config.BuildConfiguration()\
             .with_build_directory(self.config.build_directory)\
             .with_build_mode("debug")\
