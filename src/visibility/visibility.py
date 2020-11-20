@@ -112,17 +112,19 @@ class PathPreProcessor:
         return np.linalg.norm((np.asarray(p1) - np.asarray(p2)), ord = 2)
     
     def get_closest_vert(self, vert, list_to_compare):
-        best_vert = ()
-        best_dist = 10e3
-        best_idx = 0
-        for idx, ref_vert in enumerate(list_to_compare):
+        #best_vert = ()
+        #best_dist = 10e3
+        #best_idx = 0
+        distances = map(lambda x: self.dist_between_points(vert, x), list_to_compare)
+        best_idx = np.argmin(list(distances))
+        '''for idx, ref_vert in enumerate(list_to_compare):
             dist = self.dist_between_points(vert, ref_vert)
             if dist < best_dist: 
                 best_dist = dist
                 best_idx = idx
-                best_vert = ref_vert
+                best_vert = ref_vert'''
 
-        return best_vert, best_idx
+        return list_to_compare[best_idx], best_idx
         
     def find_original_vertices(self, path):
         vertices = []
