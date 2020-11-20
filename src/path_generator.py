@@ -46,7 +46,11 @@ class PathGenerator:
         print("[MPC] Findig A* solution")
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
         print("[MPC] Getting rough reference")
-        x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
+        #rint(start)
+        #print(path)
+        #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
+        x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
+        print("Rough ref was succedfully generated")
 
         fig, ax = plt.subplots()
         self.ppp.plot_all(ax)
@@ -64,8 +68,7 @@ class PathGenerator:
         system_input = []  
         states = start
         try:
-            while (not terminal) or t > 10000:  
-                
+            while (not terminal) and t < 10000:  
                 x_init = states[-3:] # picks out current state for new initial state to solver
                 
                 # Create constraints from verticies 
@@ -77,7 +80,7 @@ class PathGenerator:
                 # Take out final reference point
                 if (len(x_ref)-1 <= t+self.config.N_hor): 
                     take_steps = self.config.N_hor
-                    x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
+                    x_finish = end
                 else:
                     take_steps = 5
                     x_finish = [x_ref[t+self.config.N_hor],
