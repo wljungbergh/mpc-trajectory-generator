@@ -20,14 +20,14 @@ class Config:
         self.acc_max = 0.2
         self.acc_min = -0.2
         self.q = 0.01
-        self.qtheta = 0
+        self.qtheta = 0.05
         self.rv = 0
         self.rw = 0
-        self.qN = 0.1
+        self.qN = 0.01
         self.qthetaN = 0
         self.qCTE = 0.5
         self.acc_penalty = 0.5
-        self.omega_acc_penalty = 0.5
+        self.omega_acc_penalty = 1
         self.num_steps_taken = 10
         self.throttle_ratio = 0.9
         self.build_directory = 'mpc_build'

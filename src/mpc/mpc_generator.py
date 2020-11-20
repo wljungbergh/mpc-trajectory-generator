@@ -100,6 +100,9 @@ class MpcModule:
 
             obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
 
+            # our current point
+            p = cs.vertcat(x,y)
+
             # Initialize list with CTE to all line segments
             # https://math.stackexchange.com/questions/330269/the-distance-from-a-point-to-a-line-segment
             distances = cs.SX.ones(1)
@@ -109,8 +112,6 @@ class MpcModule:
                 s1 = s2
                 # new end point
                 s2 = cs.vertcat(z0[base+i*self.config.nx], z0[base+i*self.config.nx+1])
-                # our current point
-                p = cs.vertcat(x,y)
                 # line segment
                 s2s1 = s2-s1
                 # t_hat
@@ -124,25 +125,32 @@ class MpcModule:
 
             cost += cs.mmin(distances[1:])*self.config.qCTE
 
+
         (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
         cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
 
+        # Max speeds 
         umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
         umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
         bounds = og.constraints.Rectangle(umin, umax)
 
+        # Acceleration bounds and cost
+        # Selected velocities
         v = u[0::2]
         omega = u[1::2]
+        # Accelerations
         acc = (v-cs.vertcat(vel_init, v[0:-1]))/self.config.ts
         omega_acc = (omega-cs.vertcat(omega_init, omega[0:-1]))/self.config.ts
-        cost += cs.mtimes(acc.T,acc)*self.config.acc_penalty
-        cost += cs.mtimes(omega_acc.T,omega_acc)*self.config.omega_acc_penalty
         acc_constraints = cs.vertcat(acc, omega_acc)
+        # Acceleration bounds
         acc_min = [self.config.acc_min] * self.config.N_hor 
         omega_min = [-self.config.omega_acc_max] * self.config.N_hor
         acc_max = [self.config.acc_max] * self.config.N_hor
         omega_max = [self.config.omega_acc_max] * self.config.N_hor
         acc_bounds = og.constraints.Rectangle(acc_min + omega_min, acc_max + omega_max)
+        # Accelerations cost
+        cost += cs.mtimes(acc.T,acc)*self.config.acc_penalty
+        cost += cs.mtimes(omega_acc.T,omega_acc)*self.config.omega_acc_penalty
 
         problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(obstacle_constraints) \
                                                     .with_constraints(bounds) \
