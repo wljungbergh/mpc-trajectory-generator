@@ -5,6 +5,8 @@ import opengen as og
 import os
 import numpy as np
 import time
+from matplotlib.gridspec import GridSpec
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import math
 
@@ -19,7 +21,37 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    
+    def plot_result(self, xx, xy, vel, omega):
+        fig = plt.figure(constrained_layout = True)
+        gs = GridSpec(2, 4, figure=fig)
+
+        vel_ax = fig.add_subplot(gs[0,:2])
+        self.mpc_generator.plot_vel(vel_ax, vel)
+        vel_ax.set_xlabel('Time [s]')
+        vel_ax.set_ylabel('Velocity [m/s]')
+
+        omega_ax = fig.add_subplot(gs[1,:2])
+        self.mpc_generator.plot_omega(omega_ax, omega)
+        omega_ax.set_xlabel('Time [s]')
+        omega_ax.set_ylabel('Angular velocity [rad/s]')
+
+        path_ax =  fig.add_subplot(gs[:,2:])
+        self.ppp.plot_all(path_ax)
+        path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        path_ax.set_xlabel('X [m]', fontsize = 15)
+        path_ax.set_ylabel('Y [m]', fontsize = 15)
+        
+        legend_elems = [    Line2D([0], [0], color='k', label='Original Boundary' ),
+                            Line2D([0], [0], color='g', label='Padded Boundary'),
+                            Line2D([0], [0], color='r', label='Original Obstacles' ),
+                            Line2D([0], [0], color='b', label='Padded Obstacles' ),
+                            Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5)]
+        
+        path_ax.legend(handles = legend_elems)
+        path_ax.axis('equal')
+
+
+
     def run(self, graph_map, start, end):
         """
         Parameters
@@ -46,16 +78,10 @@ class PathGenerator:
         print("[MPC] Findig A* solution")
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
         print("[MPC] Getting rough reference")
-        #rint(start)
-        #print(path)
         #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
         print("Rough ref was succedfully generated")
-
-        fig, ax = plt.subplots()
-        self.ppp.plot_all(ax)
-        ax.plot(x_ref, y_ref)
-
+      
         
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
@@ -67,8 +93,10 @@ class PathGenerator:
 
         system_input = []  
         states = start
+        ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
         try:
             while (not terminal) and t < 10000:  
+
                 x_init = states[-3:] # picks out current state for new initial state to solver
                 
                 # Create constraints from verticies 
@@ -77,38 +105,51 @@ class PathGenerator:
                 for i, origin in enumerate(constraint_origin):
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
 
-                # Take out final reference point
-                if (len(x_ref)-1 <= t+self.config.N_hor): 
-                    take_steps = self.config.N_hor
-                    x_finish = end
+
+                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
+                if (idx+self.config.N_hor >= len(x_ref)): 
+                    x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
+                    tmp = min(len(x_ref)-1, idx)
+                    tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
+                    tmpy = y_ref[tmp:] + [end[1]] * (self.config.N_hor - (len(y_ref)-tmp))
+                    tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))     
                 else:
-                    take_steps = 5
-                    x_finish = [x_ref[t+self.config.N_hor],
-                                y_ref[t+self.config.N_hor],
-                                theta_ref[t+self.config.N_hor]]
+                    x_finish = [x_ref[idx+self.config.N_hor],
+                                y_ref[idx+self.config.N_hor],
+                                theta_ref[idx+self.config.N_hor]]
+
+                    tmpx = x_ref[idx:idx+self.config.N_hor]
+                    tmpy = y_ref[idx:idx+self.config.N_hor]
+                    tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
                  
 
                 refs = [0.0] * (self.config.N_hor * self.config.nx)
-                #refs[0::self.config.nx] = tmpx
-                #refs[1::self.config.nx] = tmpy
-                #refs[2::self.config.nx] = tmpy
-            
-                parameters = x_init+x_finish+constraints#+refs
+                refs[0::self.config.nx] = tmpx
+                refs[1::self.config.nx] = tmpy
+                refs[2::self.config.nx] = tmpt
+
+                if len(system_input):
+                    last_u = system_input[-self.config.nu:]
+                else:
+                    last_u = [0.0] * self.config.nu
+
+                parameters = x_init+last_u+x_finish+last_u+constraints+refs
                 try:
-                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, take_steps, system_input, states)
-                except RuntimeError:
+                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
+                except RuntimeError as err:
+                    print(err)
+                    mng.kill()
                     return
 
                 if exit_status in self.config.bad_exit_codes:
                     print(f"[MPC] Bad converge status: {exit_status}")
-                    ax.plot(states[0:-1:3], states[1:-1:3])
-                    #plt.show()
+                    '''ax.plot(states[0:-1:3], states[1:-1:3])
+                    #plt.show()'''
                 
-                t += take_steps
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:],end,atol=1):
+                if np.allclose(states[-3:-1],end[0:2],atol=0.01,rtol=0):
                     terminal = True
                 
         except KeyboardInterrupt:
@@ -126,21 +167,12 @@ class PathGenerator:
 
         # Plot solution
         # ------------------------------------
-        nx = self.config.nz//2
+        nx = self.config.nx
         xx = states[0:len(states):nx]
         xy = states[1:len(states):nx]
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-        ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
-        ax.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
-        plt.axis('equal')
-        plt.grid('on')
-        plt.legend()
-        
-        #plt.plot.figure()
-        #plt.plot(uv, c='b', label='velocity')
-        #plt.legend()
-        plt.show()    
+
         
         return xx,xy,uv,uomega    # uncomment if we want to return the traj
