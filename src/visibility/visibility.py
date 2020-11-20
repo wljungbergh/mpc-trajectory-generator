@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import timeit
 
 # Helper functions 
-def plot_obstacles(obstacle_list, c, ax):
+def plot_obstacles(obstacle_list, c, ax, label):
     for obstacle in obstacle_list:
         for i in range(len(obstacle) - 1):
             point1 = obstacle[i]
@@ -17,10 +17,10 @@ def plot_obstacles(obstacle_list, c, ax):
             plt.plot([point1[0], point2[0]], [point1[1], point2[1]], c)
         point1 = obstacle[-1]
         point2 = obstacle[0]
-        ax.plot([point1[0], point2[0]], [point1[1], point2[1]], c)
+        ax.plot([point1[0], point2[0]], [point1[1], point2[1]], c, label = label)
 
-def plot_boundaries(boundary_coordinates, ax, c = 'g'):
-    plot_obstacles([boundary_coordinates], c = c, ax = ax)
+def plot_boundaries(boundary_coordinates, ax, c = 'g', label = None):
+    plot_obstacles([boundary_coordinates], c = c, ax = ax, label = label)
 
 def plot_path(path, c, ax):
     for i in range(len(path)-1):
@@ -30,7 +30,7 @@ def plot_vertices(vertices, radius,  ax):
     for vert in vertices:
         c = plt.Circle(vert, radius, color = 'r', alpha = 0.7)
         ax.add_artist(c)
-    pass
+    
 
 
 
@@ -151,10 +151,10 @@ class PathPreProcessor:
         ######
 
     def plot_all(self, ax):
-        plot_boundaries(self.original_boundary_coordinates, ax, c='k')
-        plot_boundaries(self.processed_boundary_coordinates, ax, c='g')
-        plot_obstacles(self.original_obstacle_list, c='r', ax = ax)
-        plot_obstacles(self.processed_obstacle_list,c='b', ax = ax)
+        plot_boundaries(self.original_boundary_coordinates, ax, c='k', label = 'Original Boundary')
+        plot_boundaries(self.processed_boundary_coordinates, ax, c='g', label = 'Padded Boundary')
+        plot_obstacles(self.original_obstacle_list, c='r', ax = ax, label = 'Original Obstacles')
+        plot_obstacles(self.processed_obstacle_list,c='b', ax = ax, label = 'Padded Obstacles')
         plot_path(self.path, c='-ok', ax = ax)
         plot_vertices(self.vert, radius = self.config.vehicle_width, ax = ax)
     

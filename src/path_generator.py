@@ -5,6 +5,8 @@ import opengen as og
 import os
 import numpy as np
 import time
+from matplotlib.gridspec import GridSpec
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import math
 
@@ -19,7 +21,37 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    
+    def plot_result(self, xx, xy, vel, omega):
+        fig = plt.figure(constrained_layout = True)
+        gs = GridSpec(2, 4, figure=fig)
+
+        vel_ax = fig.add_subplot(gs[0,:2])
+        self.mpc_generator.plot_vel(vel_ax, vel)
+        vel_ax.set_xlabel('Time [s]')
+        vel_ax.set_ylabel('Velocity [m/s]')
+
+        omega_ax = fig.add_subplot(gs[1,:2])
+        self.mpc_generator.plot_omega(omega_ax, omega)
+        omega_ax.set_xlabel('Time [s]')
+        omega_ax.set_ylabel('Angular velocity [rad/s]')
+
+        path_ax =  fig.add_subplot(gs[:,2:])
+        self.ppp.plot_all(path_ax)
+        path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        path_ax.set_xlabel('X [m]', fontsize = 15)
+        path_ax.set_ylabel('Y [m]', fontsize = 15)
+        
+        legend_elems = [    Line2D([0], [0], color='k', label='Original Boundary' ),
+                            Line2D([0], [0], color='g', label='Padded Boundary'),
+                            Line2D([0], [0], color='r', label='Original Obstacles' ),
+                            Line2D([0], [0], color='b', label='Padded Obstacles' ),
+                            Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5)]
+        
+        path_ax.legend(handles = legend_elems)
+        path_ax.axis('equal')
+
+
+
     def run(self, graph_map, start, end):
         """
         Parameters
@@ -47,11 +79,6 @@ class PathGenerator:
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
         print("[MPC] Getting rough reference")
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
-
-        fig, ax = plt.subplots()
-        self.ppp.plot_all(ax)
-        ax.plot(x_ref, y_ref, label='Rough ref')
-
         
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
@@ -115,8 +142,8 @@ class PathGenerator:
 
                 if exit_status in self.config.bad_exit_codes:
                     print(f"[MPC] Bad converge status: {exit_status}")
-                    ax.plot(states[0:-1:3], states[1:-1:3])
-                    #plt.show()
+                    '''ax.plot(states[0:-1:3], states[1:-1:3])
+                    #plt.show()'''
                 
                 total_solver_time += solver_time
 
@@ -144,17 +171,6 @@ class PathGenerator:
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-        ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
-        ax.plot(x_ref, y_ref, c='red', linewidth=2 ,label='reference_path')
-        plt.axis('equal')
-        plt.grid('on')
-        plt.legend()
-        plt.show()
-        
-        plt.figure()
-        plt.plot(uv, c='b', label='velocity')
-        plt.plot(uomega, c='r', label='omega')
-        plt.legend()
-        plt.show()    
+
         
         return xx,xy,uv,uomega    # uncomment if we want to return the traj

@@ -81,10 +81,7 @@ class MpcModule:
         base = self.config.nz+self.config.Nobs*self.config.nobs
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
-            
-            #state_ref = (z0[3], z0[4], z0[5])#(z0[base+t*self.config.nx], z0[base+t*self.config.nx+1], z0[base+t*self.config.nx+2])
-            #state_curr = (x, y, theta)
-            #cost += self.cost_fn(state_curr, state_ref)
+
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
@@ -174,52 +171,14 @@ class MpcModule:
             .with_verbosity_level(1)
         builder.build()
 
-    def plot_trajectory(self, u, x_init):
-        nx = self.config.nz//2 # nz is start and end state
-        states = [0.0] * (nx*(self.config.N_hor+1))
-        states[0:nx] = x_init
-        for t in range(0, self.config.N_hor):
-            u_t = u[t*nu:(t+1)*nu]
+    def plot_vel(self, ax, vel):
+        time = np.arange(0, self.config.ts*len(vel), self.config.ts)
+        ax.plot(time, vel, '-o')
 
-            x = states[t * nx]
-            y = states[t * nx + 1]
-            theta = states[t * nx + 2]
+    def plot_omega(self, ax, omega):
+        time = np.arange(0, self.config.ts*len(omega), self.config.ts)
+        ax.plot(time, omega, '-o')
 
-            theta_dot = u_t[1]
-
-            states[(t+1)*nx] = x + ts * (u_t[0] * cs.cos(theta))
-            states[(t+1)*nx+1] = y + ts * (u_t[0] * cs.sin(theta))
-            states[(t+1)*nx+2] = theta + ts*theta_dot
-
-        xx = states[0:nx*N:nx]
-        xy = states[1:nx*N:nx]
-
-        plt.subplot(313)
-        plt.plot(xx, xy, '-o')
-        self.plot_obstacles()
-        
-        plt.axis('equal')
-        plt.grid('on')
-
-    def plot_obstacles(self):
-        for circ in self.obstacles:
-            circle = plt.Circle((circ[0],circ[1]),circ[2],color='r')
-            plt.gcf().gca().add_artist(circle)
-
-    def plot_vel_omega(self, u_star):
-        time = np.arange(0, self.config.ts*self.config.N_hor, self.config.ts)
-        
-        vel = u_star[0:self.config.nu*self.config.N_hor:2]
-        omega = u_star[1:self.config.nu*self.config.N_hor:2]
-
-        plt.subplot(311)
-        plt.plot(time, vel, '-o')
-        plt.ylabel('velocity')
-        plt.subplot(312)
-        plt.plot(time, omega, '-o')
-        plt.ylabel('angular velocity')
-        plt.xlabel('Time')
-    
     def run(self, parameters, mng, take_steps, system_input, states):
 
         solution = mng.call(parameters)
