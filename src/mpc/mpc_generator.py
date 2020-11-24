@@ -15,7 +15,7 @@ class MpcModule:
     def __init__(self, config):
         self.obstacles = []                     # list of obstacles
         self.config = config
-        
+    
     def rough_ref2(self,start_pos, end_pos , node_list,i=0):
     
     # If starting position is included in 
@@ -43,8 +43,8 @@ class MpcModule:
         
         x,y,theta = start_pos
         x_target, y_target = node_list[i]
-        x_dir = (x_target-x)/math.hypot(x_target-x,y_target-y)
-        y_dir = (y_target-y)/math.hypot(x_target-x,y_target-y)
+        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
+        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
         theta_target = math.atan2(y_dir,x_dir)
     
         traveling = True
@@ -61,15 +61,15 @@ class MpcModule:
                     if i >len(node_list) :
                         # when we have arrived in the end node the desired angle is taken
                         x_target, y_target = end_pos[0:2]
-                        x_dir = (x_target-x)/math.hypot(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/math.hypot(x_target-x,y_target-y)
+                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
+                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
                         theta_target = end_pos[2]
                         turning = True
                         traveling = False
                     else:
                         x_target, y_target = node_list[i]
-                        x_dir = (x_target-x)/math.hypot(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/math.hypot(x_target-x,y_target-y)
+                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
+                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
                         theta_target = math.atan2(y_dir,x_dir)
                         turning = True #always set turning true for new target node
             
@@ -105,16 +105,16 @@ class MpcModule:
                     turning = True
                     if i >len(node_list)-1 :
                         x_target,y_target = end_pos[0],end_pos[1]
-                        x_dir = (x_target-x)/math.hypot(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/math.hypot(x_target-x,y_target-y)
+                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
+                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
                         theta_target = end_pos[2]
                         turning = True
                         traveling= False
                         break
                     else:
                         x_target, y_target = node_list[i] # set a new target node
-                        x_dir = (x_target-x)/math.hypot(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/math.hypot(x_target-x,y_target-y)
+                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
+                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
                         theta_target = math.atan2(y_dir,x_dir)
 
         if(end_pos[0] != x or end_pos[1] != y or end_pos[2] != theta):
@@ -170,11 +170,11 @@ class MpcModule:
             
         return x_ref, y_ref, theta_ref
     
-    def cost_fn(self, state_curr, state_ref):
+    def cost_fn(self, state_curr, state_ref, q, qtheta):
         dx = (state_curr[0] - state_ref[0])**2
         dy = (state_curr[1] - state_ref[1])**2
         dtheta = (state_curr[2] - state_ref[2])**2
-        cost = self.config.q*(dx + dy) + self.config.qtheta*dtheta
+        cost = q*(dx + dy) + qtheta*dtheta
         return cost
         
     def build(self):
@@ -182,10 +182,11 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
 
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
-        (xref , yref, thetaref, velref, omegaref) = (z0[self.config.nz/2], z0[self.config.nz/2+1], z0[self.config.nz/2+2], z0[self.config.nz/2+3], z0[self.config.nz/2+4])
+        (xref , yref, thetaref, velref, omegaref) = (z0[5], z0[6], z0[7], z0[8], z0[9])
+        (q, qtheta, rv, rw, qN, qthetaN, qCTE, acc_penalty, omega_acc_penalty) = (z0[10], z0[11], z0[12], z0[13], z0[14], z0[15], z0[16], z0[17], z0[18])
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
@@ -194,12 +195,12 @@ class MpcModule:
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
-            cost += self.config.rv * u_t[0]**2 + self.config.rw * u_t[1] ** 2
+            cost += rv * u_t[0]**2 + rw * u_t[1] ** 2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
             y += self.config.ts * (u_t[0] * cs.sin(theta))
             theta += self.config.ts * u_t[1]
 
-            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref))
+            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
 
             xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
             ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
@@ -233,15 +234,15 @@ class MpcModule:
                 # append distance
                 distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
 
-            cost += cs.mmin(distances[1:])*self.config.qCTE
+            cost += cs.mmin(distances[1:])*qCTE
 
 
         
-        cost += self.config.qN*((x-xref)**2 + (y-yref)**2) + self.config.qthetaN*(theta-thetaref)**2
+        cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
 
         # Max speeds 
-        umin = [-self.config.vmax,-self.config.omega_max] * self.config.N_hor 
-        umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor  
+        umin = [self.config.vmin, -self.config.omega_max] * self.config.N_hor
+        umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor
         bounds = og.constraints.Rectangle(umin, umax)
 
         # Acceleration bounds and cost
@@ -259,15 +260,15 @@ class MpcModule:
         omega_max = [self.config.omega_acc_max] * self.config.N_hor
         acc_bounds = og.constraints.Rectangle(acc_min + omega_min, acc_max + omega_max)
         # Accelerations cost
-        cost += cs.mtimes(acc.T,acc)*self.config.acc_penalty
-        cost += cs.mtimes(omega_acc.T,omega_acc)*self.config.omega_acc_penalty
+        cost += cs.mtimes(acc.T,acc)*acc_penalty
+        cost += cs.mtimes(omega_acc.T,omega_acc)*omega_acc_penalty
 
         problem = og.builder.Problem(u, z0, cost).with_penalty_constraints(obstacle_constraints) \
                                                     .with_constraints(bounds) \
                                                     .with_aug_lagrangian_constraints(acc_constraints, acc_bounds)
         build_config = og.config.BuildConfiguration()\
             .with_build_directory(self.config.build_directory)\
-            .with_build_mode("debug")\
+            .with_build_mode("release")\
             .with_tcp_interface_config()
 
         meta = og.config.OptimizerMeta()\
@@ -348,6 +349,11 @@ class MpcModule:
             circles[i*self.config.nobs:(i+1)*self.config.nobs] = circ[0:self.config.nobs]
             
         return x_init, x_finish, node_list, circles, radius
+
+
+def safe_norm(x,y):
+    dist = math.hypot(x,y)
+    return 1e-16 if dist == 0 else dist
 
 
 if __name__ == '__main__':
