@@ -1,37 +1,68 @@
+import yaml
+
 """ 
     File that contains all the neccessary configuration parameters for the 
     MPC Trajectory Generation Module
 """
-
-class Config:
-    def __init__(self):
-        self.vehicle_width = 0.5
-        self.vehicle_margin = 0.25
-        self.N_hor = 10
-        self.nu = 2
-        self.nz = 10+9 # 9 costs
-        self.nx = 3
-        self.nobs = 3
-        self.Nobs =  10
-        self.ts = 0.2
-        self.vmax = 1.5
-        self.vmin = 0.0
-        self.omega_max = 0.5
-        self.omega_acc_max = 200
-        self.acc_max = 1
-        self.acc_min = -1
-        self.q = 1
-        self.qtheta = 2
-        self.rv = 10
-        self.rw = 10
-        self.qN = 200
-        self.qthetaN = 10
-        self.qCTE = 1
-        self.acc_penalty = 0.0
-        self.omega_acc_penalty = 0.0
-        self.num_steps_taken = 5
-        self.throttle_ratio = 0.9
-        self.build_directory = 'mpc_build'
-        self.optimizer_name = 'navigation'
-        self.bad_exit_codes = ["NotConvergedIterations", "NotConvergedOutOfTime"]
         
+required_config_params = {
+    'N_hor': 'The length of the receding horizon controller',
+    'lin_vel_min': 'Vehicle contraint on the minimal velocity possible',
+    'lin_vel_max': 'Vehicle contraint on the maximal velocity possible',
+    'lin_acc_min': 'Vehicle contraint on the maximal linear retardation',
+    'lin_acc_max': 'Vehicle contraint on the maximal linear acceleration',
+    'ang_vel_max': 'Vehicle contraint on the maximal angular velocity',
+    'ang_acc_max': 'Vehicle contraint on the maximal angular acceleration (considered to be symmetric)',
+    'throttle_ratio': 'What percent of the maximal velocity should we try to',
+    'num_steps_taken': 'How many steps should be taken from each mpc-solution. Range (1 - N_hor)',
+    'ts': 'Size of the time-step',
+    'lin_vel_penalty': 'Cost for linear velocity control action',
+    'lin_acc_penalty': 'Cost for linear acceleration', 
+    'ang_vel_penalty': 'Cost angular velocity control action',
+    'ang_acc_penalty': 'Cost angular acceleration',
+    'cte_penalty': 'Cost for cross-track-error from each line segment',
+    'q': 'Cost for each position relative the final reference position',
+    'qtheta': 'Cost for each heading relative to the final refernce position',
+    'qN': 'Terminal cost; error relative to final reference position',
+    'qthetaN': 'Terminal cost; error relative to final reference heading',
+    'nx': 'Number of states for the robot (x,y,theta)',
+    'nz': 'Number of optimization parameters',
+    'nu': 'Number of control inputs',
+    'nobs': 'Number of variables per obstacles',
+    'Nobs': 'Maximal number of obstacles',
+    'vehicle_width': 'Vehicle width in meters',
+    'vehicle_margin': 'Extra margin used for padding in meters',
+    'build_type': "Can have 'debug' or 'release'",
+    'build_directory': 'Name of the directory where the build is created',
+    'bad_exit_codes': 'Optimizer specific names',
+    'optimizer_name': 'Optimizer type, default "navigation"'
+}
+
+
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+class Configurator:
+    def __init__(self,yaml_fp):
+        self.fp = yaml_fp
+        print(f"[CONFIG] Loading configuration from '{self.fp}'")
+        with open(self.fp, 'r') as stream:
+            self.input = yaml.safe_load(stream)
+        self.args = dotdict()
+
+    def configurate_key(self, key):
+        value = self.input.get(key)
+        if value is None:
+            print(f"[CONFIG] Can not find '{key}' in the YAML-file. Explanation is: '{required_config_params[key]}'")
+            raise RuntimeError('[CONFIG] Configuration is not properly set')
+        self.args[key] = value
+
+    def configurate(self):
+        print('[CONFIG] STARTING CONFIGURATION...')
+        for key in required_config_params:
+            self.configurate_key(key)
+        print('[CONFIG] CONFIGURATION FINISHED SUCCESSFULLY...')
+        return self.args
