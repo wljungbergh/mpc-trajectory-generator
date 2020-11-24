@@ -1,6 +1,5 @@
 from visibility.visibility import PathPreProcessor
 from mpc.mpc_generator import MpcModule
-from utils.config import Config
 import opengen as og
 import os
 import numpy as np
@@ -14,8 +13,8 @@ class PathGenerator:
     """ Class responsible for generating a smooth trajectory based on inital preproccsing 
         together with mpc-solver. Uses a configuration specified in utils/config.py
     """
-    def __init__(self, build=False):
-        self.config = Config()
+    def __init__(self, config, build=False):
+        self.config = config 
         self.ppp = PathPreProcessor(self.config)
         self.mpc_generator = MpcModule(self.config)
         if build:
@@ -76,7 +75,7 @@ class PathGenerator:
         mng.start()
         mng.ping()
         
-        parameter_list = [self.config.q, self.config.qtheta, self.config.rv, self.config.rw, self.config.qN, self.config.qthetaN, self.config.qCTE, self.config.acc_penalty, self.config.omega_acc_penalty]
+        parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.lin_acc_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         
         tt = time.time()
         print("[MPC] Building visibility graph")

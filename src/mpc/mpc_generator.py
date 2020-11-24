@@ -28,7 +28,7 @@ class MpcModule:
             node_list.append((end_pos[0],end_pos[1])) #adds end node if not included
     
         #i = 0 # current index of target node
-        v = self.config.throttle_ratio*self.config.vmax  # Want to plan reference trajectory with less than top speed 
+        v = self.config.throttle_ratio*self.config.lin_vel_max  # Want to plan reference trajectory with less than top speed 
         omega = self.config.throttle_ratio*self.config.omega_max 
         # so that there is room for the mpc solution tocatch up since it will likely 
         # have a slightly longer trajectory
@@ -129,7 +129,7 @@ class MpcModule:
     def rough_ref(self, pos, node_list, i=0):
     
         #i = 0 # current index of target node
-        v = self.config.throttle_ratio*self.config.vmax # Want to plan reference trajectory with less than top speed 
+        v = self.config.throttle_ratio*self.config.lin_vel_max # Want to plan reference trajectory with less than top speed 
         # so that there is room for the mpc solution tocatch up since it will likely 
         # have a slightly longer trajectory
         x_ref = []
@@ -241,8 +241,8 @@ class MpcModule:
         cost += qN*((x-xref)**2 + (y-yref)**2) + qthetaN*(theta-thetaref)**2
 
         # Max speeds 
-        umin = [self.config.vmin, -self.config.omega_max] * self.config.N_hor
-        umax = [self.config.vmax, self.config.omega_max] * self.config.N_hor
+        umin = [self.config.lin_vel_min, -self.config.ang_vel_max] * self.config.N_hor
+        umax = [self.config.lin_vel_max, self.config.ang_vel_max] * self.config.N_hor
         bounds = og.constraints.Rectangle(umin, umax)
 
         # Acceleration bounds and cost
@@ -254,10 +254,10 @@ class MpcModule:
         omega_acc = (omega-cs.vertcat(omega_init, omega[0:-1]))/self.config.ts
         acc_constraints = cs.vertcat(acc, omega_acc)
         # Acceleration bounds
-        acc_min = [self.config.acc_min] * self.config.N_hor 
-        omega_min = [-self.config.omega_acc_max] * self.config.N_hor
-        acc_max = [self.config.acc_max] * self.config.N_hor
-        omega_max = [self.config.omega_acc_max] * self.config.N_hor
+        acc_min = [self.config.lin_acc_min] * self.config.N_hor 
+        omega_min = [-self.config.ang_acc_max] * self.config.N_hor
+        acc_max = [self.config.lin_acc_max] * self.config.N_hor
+        omega_max = [self.config.ang_acc_max] * self.config.N_hor
         acc_bounds = og.constraints.Rectangle(acc_min + omega_min, acc_max + omega_max)
         # Accelerations cost
         cost += cs.mtimes(acc.T,acc)*acc_penalty
@@ -268,7 +268,7 @@ class MpcModule:
                                                     .with_aug_lagrangian_constraints(acc_constraints, acc_bounds)
         build_config = og.config.BuildConfiguration()\
             .with_build_directory(self.config.build_directory)\
-            .with_build_mode("release")\
+            .with_build_mode(self.config.build_type)\
             .with_tcp_interface_config()
 
         meta = og.config.OptimizerMeta()\
