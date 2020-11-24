@@ -22,13 +22,31 @@ class ExampleApp(tk.Tk):
         self.button_start_obstacle.pack(side="top", fill="both", expand=True)
         self.button_finish_obstacle = tk.Button(self, text = "Finish obstacle", command = self.finish_obstacle, state = 'disabled')
         self.button_finish_obstacle.pack(side="top", fill="both", expand=True)
-        self.clear_button = tk.Button(self, text = "Clear", command = self.clear_all)
-        self.clear_button.pack(side="top", fill="both", expand=True)
+        self.button_clear = tk.Button(self, text = "Clear", command = self.clear_all)
+        self.button_clear.pack(side="top", fill="both", expand=True)
+        self.button_finish = tk.Button(self, text = "Finish", command = self.finish)
+        self.button_finish.pack(side="top", fill="both", expand=True)
         self.canvas.bind("<Motion>", self.tell_me_where_you_are)
         self.canvas.bind("<ButtonPress-1>", self.draw_from_where_you_are)
 
     def clear_all(self):
         self.canvas.delete("all")
+        self.boundary_points = []
+        self.polygon_points = []
+        self.drawing_boundary = False
+        self.drawing_obstacle = False
+        if self.line_to_mouse:
+            self.canvas.delete(self.line_to_mouse)
+        self.reset_button_states()
+
+    def finish(self):
+        self.destroy()
+
+    def reset_button_states(self):
+        self.button_start_boundary["state"] = 'normal'
+        self.button_start_obstacle["state"] = 'normal'
+        self.button_finish_boundary["state"] = 'disable'
+        self.button_finish_obstacle["state"] = 'disable'
 
     def start_boundary(self):
         self.line_fill_color = 'yellow'
@@ -39,7 +57,7 @@ class ExampleApp(tk.Tk):
         self.points_recorded = []
     
     def finish_boundary(self):
-        self.boundary_points = self.points_recorded
+        self.boundary_points = [(x,y) for x,y in zip(self.points_recorded[0::2], self.points_recorded[1::2])]
         self.canvas.create_line(self.points_recorded[-2], self.points_recorded[-1],
             self.points_recorded[0], self.points_recorded[1], fill='yellow')
 
@@ -62,7 +80,7 @@ class ExampleApp(tk.Tk):
         self.drawing_obstacle = True
 
     def finish_obstacle(self):
-        self.polygon_points.append(self.points_recorded)
+        self.polygon_points.append([(x,y) for x,y in zip(self.points_recorded[0::2], self.points_recorded[1::2])])
         self.canvas.create_line(self.points_recorded[-2], self.points_recorded[-1],
             self.points_recorded[0], self.points_recorded[1], fill=self.line_fill_color)
 
@@ -103,5 +121,5 @@ class ExampleApp(tk.Tk):
 if __name__ == "__main__":
     app = ExampleApp()
     app.mainloop()
-    print(app.boundary_points)
-    print(app.polygon_points)
+    print(f"Boundary coordinates: {app.boundary_points}")
+    print(f"Obstacle coordinates: {app.polygon_points}")
