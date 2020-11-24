@@ -72,21 +72,22 @@ class PathGenerator:
         None.
 
         """
+        mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
+        mng.start()
+        mng.ping()
+        
+        parameter_list = [self.config.q, self.config.qtheta, self.config.rv, self.config.rw, self.config.qN, self.config.qthetaN, self.config.qCTE, self.config.acc_penalty, self.config.omega_acc_penalty]
+        
         tt = time.time()
         print("[MPC] Building visibility graph")
         self.ppp.prepare(graph_map)
         print("[MPC] Findig A* solution")
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
         print("[MPC] Getting rough reference")
-        #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
-        x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
-        print("Rough ref was succedfully generated")
+        x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
+        #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
+        print("[MPC] Rough reference was succedfully generated")
       
-        
-        mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
-        mng.start()
-        mng.ping()
-  
         terminal = False
         t=0
         total_solver_time = 0
@@ -104,7 +105,6 @@ class PathGenerator:
                 constraints = [0.0] * self.config.Nobs*self.config.nobs
                 for i, origin in enumerate(constraint_origin):
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-
 
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
                 if (idx+self.config.N_hor >= len(x_ref)): 
@@ -134,7 +134,7 @@ class PathGenerator:
                 else:
                     last_u = [0.0] * self.config.nu
 
-                parameters = x_init+last_u+x_finish+last_u+constraints+refs
+                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
@@ -149,8 +149,10 @@ class PathGenerator:
                 
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.01,rtol=0):
+                if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0):
                     terminal = True
+
+                t += self.config.num_steps_taken
                 
         except KeyboardInterrupt:
             print("[MPC] killing TCP connection to MCP solver...")
