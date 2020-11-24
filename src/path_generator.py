@@ -98,7 +98,7 @@ class PathGenerator:
         try:
             while (not terminal) and t < 10000:  
 
-                x_init = states[-3:] # picks out current state for new initial state to solver
+                x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
                 
                 # Create constraints from verticies 
                 constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
@@ -108,11 +108,11 @@ class PathGenerator:
 
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
                 if (idx+self.config.N_hor >= len(x_ref)): 
-                    x_finish = [x_ref[-1], y_ref[-1], theta_ref[-1]]
+                    x_finish = end
                     tmp = min(len(x_ref)-1, idx)
                     tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
                     tmpy = y_ref[tmp:] + [end[1]] * (self.config.N_hor - (len(y_ref)-tmp))
-                    tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))     
+                    tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
                 else:
                     x_finish = [x_ref[idx+self.config.N_hor],
                                 y_ref[idx+self.config.N_hor],
@@ -149,8 +149,9 @@ class PathGenerator:
                 
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0):
+                if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0) and abs(states[-1]-end[-1])<0.1:
                     terminal = True
+                    print("[MPC] MPC solution found.")
 
                 t += self.config.num_steps_taken
                 
