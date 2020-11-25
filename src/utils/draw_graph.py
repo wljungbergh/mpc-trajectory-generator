@@ -16,7 +16,7 @@ class ExampleApp(tk.Tk):
         self.line_to_mouse = None
 
         self.canvas = tk.Canvas(
-            self, width=400, height=400, bg="black", cursor="cross")
+            self, width=600, height=600, bg="black", cursor="cross")
         self.canvas.pack(side="top", fill="both", expand=True)
 
         self.button_start_boundary = tk.Button(
