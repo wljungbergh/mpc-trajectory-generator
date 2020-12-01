@@ -101,7 +101,7 @@ class PathGenerator:
         states = start
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
         try:
-            while (not terminal) and t < 10000:  
+            while (not terminal) and t < 1000:  
 
                 x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
                 
@@ -163,7 +163,13 @@ class PathGenerator:
         except KeyboardInterrupt:
             print("[MPC] killing TCP connection to MCP solver...")
             mng.kill()
-            return
+            nx = self.config.nx
+            xx = states[0:len(states):nx]
+            xy = states[1:len(states):nx]
+            uv = system_input[0:len(system_input):2]
+            uomega = system_input[1:len(system_input):2]
+            
+            return xx,xy,uv,uomega 
             
 
         mng.kill()
