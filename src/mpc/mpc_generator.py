@@ -291,7 +291,6 @@ class MpcModule:
 
     def plot_omega(self, ax, omega):
         time = np.arange(0, self.config.ts*(len(omega)+1), self.config.ts)
-        #time = time[:len(omega)+1]
         ax.plot(time, [0]+omega, '-o', markersize = 4, linewidth=2)
 
     def run(self, parameters, mng, take_steps, system_input, states):
