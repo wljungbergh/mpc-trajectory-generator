@@ -20,7 +20,7 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    def plot_result(self, xx, xy, vel, omega):
+    def plot_result(self, xx, xy, vel, omega, start, end):
         fig = plt.figure(constrained_layout = True)
         gs = GridSpec(2, 4, figure=fig)
 
@@ -36,15 +36,21 @@ class PathGenerator:
 
         path_ax =  fig.add_subplot(gs[:,2:])
         self.ppp.plot_all(path_ax)
-        path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha =0.5)
+        path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha=0.5)
+        path_ax.plot(start[0], start[1], marker='*', color='g', markersize = 15)
+        path_ax.plot(end[0], end[1], marker='*', color='r', markersize = 15)
+
         path_ax.set_xlabel('X [m]', fontsize = 15)
         path_ax.set_ylabel('Y [m]', fontsize = 15)
-        
+
         legend_elems = [    Line2D([0], [0], color='k', label='Original Boundary' ),
                             Line2D([0], [0], color='g', label='Padded Boundary'),
                             Line2D([0], [0], color='r', label='Original Obstacles' ),
                             Line2D([0], [0], color='b', label='Padded Obstacles' ),
-                            Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5)]
+                            Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='g', label='Start Position', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='r', label='End Position'),
+                            ]
         
         path_ax.legend(handles = legend_elems)
         path_ax.axis('equal')
