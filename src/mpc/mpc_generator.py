@@ -287,13 +287,12 @@ class MpcModule:
 
     def plot_vel(self, ax, vel):
         time = np.arange(0, self.config.ts*(len(vel)+1), self.config.ts)
-        #time = time[:len(vel)+1]
-        ax.plot(time, [0]+vel, '-o')
+        ax.plot(time, [0]+vel, '-o', markersize = 4, linewidth=2)
 
     def plot_omega(self, ax, omega):
         time = np.arange(0, self.config.ts*(len(omega)+1), self.config.ts)
         #time = time[:len(omega)+1]
-        ax.plot(time, [0]+omega, '-o')
+        ax.plot(time, [0]+omega, '-o', markersize = 4, linewidth=2)
 
     def run(self, parameters, mng, take_steps, system_input, states):
 
