@@ -33,12 +33,12 @@ class Graphs:
 
         # To be specified in clock-wise ordering
         obstacle_list = [
-            [(5.0, 5.0), (5.0, 15.0), (7.0, 15.0), (7.0, 5.0)],
+            [(5.0, 0.0), (5.0, 15.0), (7.0, 15.0), (7.0, 0.0)],
             [(12.0, 12.5),(12.0,20.0),(15.0,20.0),(15.0,12.5)], 
             [(12.0, 0.0),(12.0,7.5),(15.0,7.5),(15.0, 0.0)],
          ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,10), (19,10)))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,5), (19,10)))
 
         ############### Third Graph ############################# 
         # To be specified in counter-clockwise ordering
