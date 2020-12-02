@@ -101,7 +101,7 @@ class PathGenerator:
         states = start
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
         try:
-            while (not terminal) and t < 1000:  
+            while (not terminal) and t < 500.0/self.config.ts:  
 
                 x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
                 
@@ -154,7 +154,7 @@ class PathGenerator:
                 
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0) and abs(states[-1]-end[-1])<0.1:
+                if np.allclose(states[-3:-1],end[0:2],atol=0.5,rtol=0) and abs(states[-1]-end[-1])<0.5:
                     terminal = True
                     print("[MPC] MPC solution found.")
 
