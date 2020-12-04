@@ -1,0 +1,46 @@
+# This constitutes the default configuration file for the mpc-generator. 
+################################################################################
+################################################################################
+################################################################################
+
+# Parameters that are essential for the mpc-formulation. Changing these will require a rebuild of the solution
+N_hor: 10           # The length of the receding horizon controller 
+lin_vel_min: -0.5   # Vehicle contraint on the minimal velocity possible
+lin_vel_max: 1.5    # Vehicle contraint on the maximal velocity possible
+lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
+lin_acc_max: 1      # Vehicle contraint on the maximal linear acceleration
+ang_vel_max: 0.5    # Vehicle contraint on the maximal angular velocity
+ang_acc_max: 3      # Vehicle contraint on the maximal angular acceleration (considered to be symmetric)
+
+# Parameters specific to the solution algorithm
+throttle_ratio: 0.9 # What % of the maximal velocity should we try to
+num_steps_taken: 1  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
+ts: 0.2             # Size of the time-step
+
+# Weights
+lin_vel_penalty: 5      # Cost for linear velocity control action
+lin_acc_penalty: 5.0    # Cost for linear acceleration 
+ang_vel_penalty: 7      # Cost angular velocity control action
+ang_acc_penalty: 5.0    # Cost angular acceleration
+cte_penalty: 4          # Cost for cross-track-error from each line segment
+q: 0.0                  # Cost for each position relative the final reference position
+qtheta: 0.0             # Cost for each heading relative to the final refernce position
+qN: 150                 # Terminal cost; error relative to final reference position         
+qthetaN: 0.1            # Terminal cost; error relative to final reference heading 
+
+# Helper variables (Generally does not have to be changed)
+nx: 3     # Number of states for the robot (x,y,theta)
+nz: 19    # Number of optimization parameters
+nu: 2     # Number of control inputs
+nobs: 3   # Number of variables per obstacles
+Nobs: 10  # Maximal number of obstacles
+
+# Vehicle parameters
+vehicle_width:  0.5   # Vehicle width in meters
+vehicle_margin: 0.25  # Extra margin used for padding in meters
+
+# Building options in the optimizer
+build_type: 'debug'           # Can have 'debug' or 'release'
+build_directory: 'mpc_build'  # Name of the directory where the build is created
+bad_exit_codes: ["NotConvergedIterations", "NotConvergedOutOfTime"] # Optimizer specific names
+optimizer_name: 'navigation' # optimizer type
