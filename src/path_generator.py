@@ -118,6 +118,7 @@ class PathGenerator:
                     tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
                     tmpy = y_ref[tmp:] + [end[1]] * (self.config.N_hor - (len(y_ref)-tmp))
                     tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
+                    parameter_list = [self.config.q*2, self.config.qtheta, 0, self.config.lin_acc_penalty/2, self.config.qN*10, self.config.qthetaN*10, self.config.cte_penalty*2, self.config.lin_acc_penalty/2, self.config.ang_acc_penalty/2]
                 else:
                     x_finish = [x_ref[idx+self.config.N_hor],
                                 y_ref[idx+self.config.N_hor],
