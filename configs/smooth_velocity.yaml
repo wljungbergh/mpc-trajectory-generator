@@ -9,24 +9,24 @@ lin_vel_min: -0.5   # Vehicle contraint on the minimal velocity possible
 lin_vel_max: 1.5    # Vehicle contraint on the maximal velocity possible
 lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
 lin_acc_max: 1      # Vehicle contraint on the maximal linear acceleration
-ang_vel_max: 0.5    # Vehicle contraint on the maximal angular velocity
+ang_vel_max: 1    # Vehicle contraint on the maximal angular velocity
 ang_acc_max: 5    # Vehicle contraint on the maximal angular acceleration (considered to be symmetric)
 
 # Parameters specific to the solution algorithm
-throttle_ratio: 0.8 # What % of the maximal velocity should we try to
-num_steps_taken: 3  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
+throttle_ratio: 0.9 # What % of the maximal velocity should we try to
+num_steps_taken: 2  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
 ts: 0.2             # Size of the time-step
 
 # Weights
 lin_vel_penalty: 0     # Cost for linear velocity control action
-lin_acc_penalty: 15.0    # Cost for linear acceleration 
+lin_acc_penalty: 8.0    # Cost for linear acceleration 
 ang_vel_penalty: 0     # Cost angular velocity control action
-ang_acc_penalty: 30.0    # Cost angular acceleration
-cte_penalty: 15.0          # Cost for cross-track-error from each line segment
-q: 2                  # Cost for each position relative the final reference position
+ang_acc_penalty: 20.0    # Cost angular acceleration
+cte_penalty: 20.0          # Cost for cross-track-error from each line segment
+q: 1                  # Cost for each position relative the final reference position
 qtheta: 0            # Cost for each heading relative to the final refernce position
 qN: 5                  # Terminal cost; error relative to final reference position         
-qthetaN: 1            # Terminal cost; error relative to final reference heading 
+qthetaN: 0.2            # Terminal cost; error relative to final reference heading 
 
 # Helper variables (Generally does not have to be changed)
 nx: 3     # Number of states for the robot (x,y,theta)
