@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=1)
+g = graphs.get_graph(complexity=2)
 file_path = Path(__file__)
 
 config_fn = 'default.yaml'
