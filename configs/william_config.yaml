@@ -4,7 +4,7 @@
 ################################################################################
 
 # Parameters that are essential for the mpc-formulation. Changing these will require a rebuild of the solution
-N_hor: 20           # The length of the receding horizon controller 
+N_hor: 15           # The length of the receding horizon controller 
 lin_vel_min: -0.5   # Vehicle contraint on the minimal velocity possible
 lin_vel_max: 1.5    # Vehicle contraint on the maximal velocity possible
 lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
@@ -14,7 +14,7 @@ ang_acc_max: 5    # Vehicle contraint on the maximal angular acceleration (consi
 
 # Parameters specific to the solution algorithm
 throttle_ratio: 0.8 # What % of the maximal velocity should we try to
-num_steps_taken: 1  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
+num_steps_taken: 3  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
 ts: 0.2             # Size of the time-step
 
 # Weights
