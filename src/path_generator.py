@@ -13,8 +13,9 @@ class PathGenerator:
     """ Class responsible for generating a smooth trajectory based on inital preproccsing 
         together with mpc-solver. Uses a configuration specified in utils/config.py
     """
-    def __init__(self, config, build=False):
+    def __init__(self, config, build=False, verbose=False):
         self.config = config 
+        self.verbose = verbose
         self.ppp = PathPreProcessor(self.config)
         self.mpc_generator = MpcModule(self.config)
         if build:
@@ -84,21 +85,25 @@ class PathGenerator:
         parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.lin_acc_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         
         tt = time.time()
-        print("[MPC] Building visibility graph")
+        if self.verbose:
+            print("[MPC] Building visibility graph")
         self.ppp.prepare(graph_map)
-        print("[MPC] Findig A* solution")
+        if self.verbose:
+            print("[MPC] Findig A* solution")
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
-        print("[MPC] Getting rough reference")
+        if self.verbose:
+            print("[MPC] Getting rough reference")
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
         #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
-        print("[MPC] Rough reference was succedfully generated")
+        if self.verbose:
+            print("[MPC] Rough reference was succedfully generated")
       
         terminal = False
         t=0
         total_solver_time = 0
 
         system_input = []  
-        states = start
+        states = start.copy()
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
@@ -143,25 +148,29 @@ class PathGenerator:
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
-                    print(err)
+                    if self.verbose:
+                        print(err)
                     mng.kill()
                     return
 
                 if exit_status in self.config.bad_exit_codes:
-                    print(f"[MPC] Bad converge status: {exit_status}")
+                    if self.verbose:
+                        print(f"[MPC] Bad converge status: {exit_status}")
                     '''ax.plot(states[0:-1:3], states[1:-1:3])
                     #plt.show()'''
                 
                 total_solver_time += solver_time
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.5,rtol=0) and abs(states[-1]-end[-1])<0.5:
+                if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0):# and abs(states[-1]-end[-1])<0.5:
                     terminal = True
+                    
                     print("[MPC] MPC solution found.")
 
                 t += self.config.num_steps_taken
                 
         except KeyboardInterrupt:
-            print("[MPC] killing TCP connection to MCP solver...")
+            if self.verbose:
+                print("[MPC] killing TCP connection to MCP solver...")
             mng.kill()
             nx = self.config.nx
             xx = states[0:len(states):nx]
@@ -175,7 +184,9 @@ class PathGenerator:
         mng.kill()
         
         total_time = int(1000*(time.time()-tt))
+        
         print("Total solution time: {} ms".format(total_time))
+    
         print("Total MPC solver time: {} ms".format(total_solver_time))
 
 

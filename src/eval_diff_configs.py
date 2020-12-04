@@ -6,20 +6,24 @@ from matplotlib.lines import Line2D
 from utils.config import Configurator
 from pathlib import Path
 import os
+import time
 
 graphs = Graphs()
 g = graphs.get_graph(complexity=1)
 file_path = Path(__file__)
 
 start = list(g.start) + [math.radians(45)]
-end = list(g.end) + [math.radians(0)]
+end = list(g.end) + [math.radians(260)]
 folder_name = os.path.join(str(file_path.parent.parent), 'plotted_results')
 
 if not os.path.exists(folder_name):
     os.makedirs(folder_name, 0o666, exist_ok=True)
 
-config_filenames = ['william_config.yaml']
-for config_filename in config_filenames:
+config_filenames = ['jconf_0.yaml','jconf_1.yaml','jconf_2.yaml','jconf_3.yaml','jconf_4.yaml','jconf_5.yaml']
+
+t = time.strftime("%Y%m%d_%H%M%S")
+def generate_plot(config_filename):
+
     yaml_fp = os.path.join(str(file_path.parent.parent), 'configs', config_filename)
     
     configurator = Configurator(yaml_fp)
@@ -74,6 +78,11 @@ for config_filename in config_filenames:
     path_ax.axis('equal')
 
     
-    fig.savefig(os.path.join(folder_name, config_filename+'_vel_omega.png'), dpi=600, format='png')
-    fig2.savefig(os.path.join(folder_name, config_filename+'_path.png'), dpi=600, format='png')
+    fig.savefig(os.path.join(folder_name, config_filename+f'_vel_omega_{str(t)}.png'), dpi=600, format='png')
+    fig2.savefig(os.path.join(folder_name, config_filename+f'_path_{str(t)}.png'), dpi=600, format='png')
     
+    plt.close('all')
+
+for i, config_filename in enumerate(config_filenames):
+    print(f"GENERATING PLOT {i+1}/{len(config_filenames)}")
+    generate_plot(config_filename)
