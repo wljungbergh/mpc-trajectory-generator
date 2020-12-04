@@ -4,7 +4,7 @@
 ################################################################################
 
 # Parameters that are essential for the mpc-formulation. Changing these will require a rebuild of the solution
-N_hor: 15           # The length of the receding horizon controller 
+N_hor: 20           # The length of the receding horizon controller 
 lin_vel_min: -0.5   # Vehicle contraint on the minimal velocity possible
 lin_vel_max: 1.5    # Vehicle contraint on the maximal velocity possible
 lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
