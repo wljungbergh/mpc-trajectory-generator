@@ -47,7 +47,7 @@ class PathGenerator:
         legend_elems = [    Line2D([0], [0], color='k', label='Original Boundary' ),
                             Line2D([0], [0], color='g', label='Padded Boundary'),
                             Line2D([0], [0], color='r', label='Original Obstacles' ),
-                            Line2D([0], [0], color='b', label='Padded Obstacles' ),
+                            Line2D([0], [0], color='y', label='Padded Obstacles' ),
                             Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5),
                             Line2D([0], [0], marker='*', color='g', label='Start Position', alpha = 0.5),
                             Line2D([0], [0], marker='*', color='r', label='End Position'),

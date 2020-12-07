@@ -156,7 +156,7 @@ class PathPreProcessor:
         plot_boundaries(self.original_boundary_coordinates, ax, c='k', label = 'Original Boundary')
         plot_boundaries(self.processed_boundary_coordinates, ax, c='g', label = 'Padded Boundary')
         plot_obstacles(self.original_obstacle_list, c='r', ax = ax, label = 'Original Obstacles')
-        plot_obstacles(self.processed_obstacle_list,c='b', ax = ax, label = 'Padded Obstacles')
+        plot_obstacles(self.processed_obstacle_list,c='y', ax = ax, label = 'Padded Obstacles')
         plot_path(self.path, c='--k', ax = ax)
         plot_vertices(self.vert, radius = self.config.vehicle_width, ax = ax)
     
