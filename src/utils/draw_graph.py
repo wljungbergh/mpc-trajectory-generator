@@ -2,9 +2,10 @@ import tkinter as tk
 
 
 class ExampleApp(tk.Tk):
-    def __init__(self):
+    def __init__(self, scale = 10):
         tk.Tk.__init__(self)
         self.x = self.y = 0
+        self.scale = scale
         self.boundary_points = []
         self.polygon_points = []
         self.points_recorded = []
@@ -74,7 +75,7 @@ class ExampleApp(tk.Tk):
         self.points_recorded = []
 
     def finish_boundary(self):
-        self.boundary_points = [(x, y) for x, y in zip(
+        self.boundary_points = [(x/self.scale, y/self.scale) for x, y in zip(
             self.points_recorded[0::2], self.points_recorded[1::2])]
         self.canvas.create_line(self.points_recorded[-2], self.points_recorded[-1],
                                 self.points_recorded[0], self.points_recorded[1], fill='yellow')
@@ -98,7 +99,7 @@ class ExampleApp(tk.Tk):
         self.drawing_obstacle = True
 
     def finish_obstacle(self):
-        self.polygon_points.append([(x, y) for x, y in zip(
+        self.polygon_points.append([(x/self.scale, y/self.scale) for x, y in zip(
             self.points_recorded[0::2], self.points_recorded[1::2])])
         self.canvas.create_line(self.points_recorded[-2], self.points_recorded[-1],
                                 self.points_recorded[0], self.points_recorded[1], fill=self.line_fill_color)

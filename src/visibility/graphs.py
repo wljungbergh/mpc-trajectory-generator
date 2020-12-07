@@ -56,6 +56,23 @@ class Graphs:
 
         self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1), (5,20)))
 
+        ############### Third Graph ############################# 
+        # To be specified in counter-clockwise ordering
+        boundary_coordinates = [(3.6, 57.8), (3.6, 3.0), (58.3, 3.0), (58.1, 58.3)]
+
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [
+                        [(21.1, 53.1), (21.4, 15.1), (9.3, 15.1), (9.1, 53.1)],
+                        [(35.7, 52.2), (48.2, 52.3), (48.7, 13.6), (36.1, 13.8)], 
+                        [(17.0, 50.5),(30.7, 50.3), (30.6, 45.0), (17.5, 45.1)],
+                        [(26.4, 39.4), (40.4, 39.3), (40.5, 35.8), (26.3, 36.0)],
+                        [(19.3, 31.7), (30.3, 31.6), (30.1, 27.7), (18.9, 27.7)],
+                        [(26.9, 22.7), (41.4, 22.6), (41.1, 17.5), (27.4, 17.6)]
+                        ]
+
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (30,5), (30,55)))
+
 
         self.min_complexity = 0
         self.max_complexity = len(self.graphs) - 1
