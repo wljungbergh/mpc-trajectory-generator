@@ -22,7 +22,7 @@ lin_vel_penalty: 5      # Cost for linear velocity control action
 lin_acc_penalty: 5.0    # Cost for linear acceleration 
 ang_vel_penalty: 7      # Cost angular velocity control action
 ang_acc_penalty: 5.0    # Cost angular acceleration
-cte_penalty: 3000          # Cost for cross-track-error from each line segment
+cte_penalty: 1000          # Cost for cross-track-error from each line segment
 q: 0.0                  # Cost for each position relative the final reference position
 qtheta: 0.0             # Cost for each heading relative to the final refernce position
 qN: 150                 # Terminal cost; error relative to final reference position         
