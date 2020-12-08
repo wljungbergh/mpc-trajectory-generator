@@ -4,7 +4,7 @@
 ################################################################################
 
 # Parameters that are essential for the mpc-formulation. Changing these will require a rebuild of the solution
-N_hor: 10           # The length of the receding horizon controller 
+N_hor: 15           # The length of the receding horizon controller 
 lin_vel_min: -0.5   # Vehicle contraint on the minimal velocity possible
 lin_vel_max: 1.5    # Vehicle contraint on the maximal velocity possible
 lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
@@ -34,7 +34,7 @@ nz: 19    # Number of optimization parameters
 nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles
-Ndynobs: 1 # Maximal number of dynamic obstacles
+Ndynobs: 2 # Maximal number of dynamic obstacles
 
 # Vehicle parameters
 vehicle_width:  0.5   # Vehicle width in meters

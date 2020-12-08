@@ -11,10 +11,10 @@ import os
 import numpy as np
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=4)
+g = graphs.get_graph(complexity=2)
 file_path = Path(__file__)
 
-config_fn = 'default.yaml'
+config_fn = 'jconf_1.yaml'
 yaml_fp = os.path.join(str(file_path.parent.parent), 'configs', config_fn)
 configurator = Configurator(yaml_fp)
 config = configurator.configurate()
@@ -25,8 +25,9 @@ start = list(g.start) + [math.radians(0)]
 end = list(g.end) + [math.radians(0)]
 
 obstacle_radius = 0.5
-obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(30/config.ts))]
-dyn_obs_list = [obs_pos]
+obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(150/config.ts))]
+obs_pos1 = [(8.0, y, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for y in np.linspace(5.5,2,int(150/config.ts))]
+dyn_obs_list = [obs_pos, obs_pos1]
 
 xx,xy,uv,uomega = path_gen.run(g, start, end, dyn_obs_list)
 
@@ -65,6 +66,7 @@ for i in range(len(xx)):
     veh = plt.Circle((xx[i], xy[i]), config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
     path_ax.add_artist(veh)
     for j in range(len(dyn_obs_list)):
+        obs_pos = dyn_obs_list[j]
         obs[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
         obs_padded[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
         path_ax.add_artist(obs_padded[j])
@@ -74,10 +76,11 @@ for i in range(len(xx)):
     
     
     plt.draw()
-    plt.pause(config.ts)
+    plt.pause(config.ts/10)
     veh.remove()    
     for j in range(len(dyn_obs_list)):
         obs[j].remove()
         obs_padded[j].remove()
     
 
+plt.show()

@@ -11,6 +11,7 @@ lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
 lin_acc_max: 1      # Vehicle contraint on the maximal linear acceleration
 ang_vel_max: 0.5    # Vehicle contraint on the maximal angular velocity
 ang_acc_max: 200    # Vehicle contraint on the maximal angular acceleration (considered to be symmetric)
+Ndynobs: 2 # Maximal number of dynamic obstacles
 
 # Parameters specific to the solution algorithm
 throttle_ratio: 0.9 # What % of the maximal velocity should we try to
@@ -34,7 +35,6 @@ nz: 19    # Number of optimization parameters
 nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles
-Ndynobs: 1 # Maximal number of dynamic obstacles
 
 # Vehicle parameters
 vehicle_width:  0.5   # Vehicle width in meters
