@@ -25,10 +25,10 @@ start = list(g.start) + [math.radians(0)]
 end = list(g.end) + [math.radians(0)]
 
 obstacle_radius = 0.5
-obs_pos = [(x, 5.0, obstacle_radius) for x in np.linspace(10,5,int(30/config.ts))]
+obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(30/config.ts))]
+dyn_obs_list = [obs_pos]
 
-
-xx,xy,uv,uomega = path_gen.run(g, start, end)
+xx,xy,uv,uomega = path_gen.run(g, start, end, dyn_obs_list)
 
 
 
@@ -57,22 +57,27 @@ legend_elems = [  Line2D([0], [0], color='k', label='Original Boundary' ),
                     mpatches.Patch(color='y', label='Padded obstacle')
                             ]
 path_ax.legend(handles = legend_elems)
+obs = [object] * len(dyn_obs_list)
+obs_padded = [object] * len(dyn_obs_list)
 
 for i in range(len(xx)):
     path_line.set_data(xx[:i], xy[:i])
-    obs = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
-    obs_padded = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
     veh = plt.Circle((xx[i], xy[i]), config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
-
-    path_ax.add_artist(obs_padded)
-    path_ax.add_artist(obs)
     path_ax.add_artist(veh)
+    for j in len(dyn_obs_list):
+        obs[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
+        obs_padded[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+        path_ax.add_artist(obs_padded[j])
+        path_ax.add_artist(obs[j])
+    
 
     
     
     plt.draw()
     plt.pause(config.ts)
-    obs.remove()
-    obs_padded.remove()
-    veh.remove()
+    veh.remove()    
+    for j in len(dyn_obs_list):
+        obs[j].remove()
+        obs_padded[j].remove()
+    
 
