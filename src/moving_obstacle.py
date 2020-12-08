@@ -10,6 +10,19 @@ from pathlib import Path
 import os
 import numpy as np
 
+
+
+def generate_obstacle(p1, p2, freq, time):
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+    time = np.array(time)
+    t = abs(np.sin(freq * time))
+    if type(t) == np.ndarray:
+        t = np.expand_dims(t,1)
+   
+    p3 = t*p1 + (1-t)*p2
+    return p3
+
 graphs = Graphs()
 g = graphs.get_graph(complexity=4)
 file_path = Path(__file__)
