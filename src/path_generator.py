@@ -8,6 +8,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import math
+import itertools
 
 class PathGenerator:
     """ Class responsible for generating a smooth trajectory based on inital preproccsing 
@@ -58,7 +59,7 @@ class PathGenerator:
 
 
 
-    def run(self, graph_map, start, end):
+    def run(self, graph_map, start, end, dyn_obs):
         """
         Parameters
         ----------
@@ -108,6 +109,7 @@ class PathGenerator:
         idx = 0
         constraints = [0.0] * self.config.Nobs*self.config.nobs
         dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
+        params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -118,6 +120,9 @@ class PathGenerator:
                 for i, origin in enumerate(constraint_origin):
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
                 
+                for i, dyn_obstacle in enumerate(dyn_obs):
+                    dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(itertools.chain(*dyn_obstacle[t:t+self.config.N_hor]))
+                    
                 # reduce search space for closest reference point TODO: how to select "5"?
                 lb_idx = max(0,idx-5*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
