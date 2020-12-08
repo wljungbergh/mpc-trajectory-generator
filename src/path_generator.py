@@ -105,6 +105,7 @@ class PathGenerator:
         system_input = []  
         states = start.copy()
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
+        idx = 0 
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -115,8 +116,12 @@ class PathGenerator:
                 constraints = [0.0] * self.config.Nobs*self.config.nobs
                 for i, origin in enumerate(constraint_origin):
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-
-                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
+                
+                # reduce search space 
+                lb_idx = max(0,idx-5*self.config.num_steps_taken)
+                ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
+                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points[lb_idx:ub_idx])
+                idx += lb_idx #idx in orignal list
                 if (idx+self.config.N_hor >= len(x_ref)): 
                     x_finish = end
                     tmp = min(len(x_ref)-1, idx)
