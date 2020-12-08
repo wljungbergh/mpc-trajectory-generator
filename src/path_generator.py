@@ -105,6 +105,9 @@ class PathGenerator:
         system_input = []  
         states = start.copy()
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
+        idx = 0
+        constraints = [0.0] * self.config.Nobs*self.config.nobs
+        dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -112,11 +115,14 @@ class PathGenerator:
                 
                 # Create constraints from verticies 
                 constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
-                constraints = [0.0] * self.config.Nobs*self.config.nobs
                 for i, origin in enumerate(constraint_origin):
                     constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-
-                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
+                
+                # reduce search space for closest reference point TODO: how to select "5"?
+                lb_idx = max(0,idx-5*self.config.num_steps_taken)
+                ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
+                _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points[lb_idx:ub_idx])
+                idx += lb_idx #idx in orignal list
                 if (idx+self.config.N_hor >= len(x_ref)): 
                     x_finish = end
                     tmp = min(len(x_ref)-1, idx)
@@ -144,7 +150,7 @@ class PathGenerator:
                 else:
                     last_u = [0.0] * self.config.nu
 
-                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+refs
+                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+dyn_constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
