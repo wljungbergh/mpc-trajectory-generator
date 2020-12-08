@@ -34,6 +34,7 @@ nz: 19    # Number of optimization parameters
 nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles
+Ndynobs: 1 # Maximal number of dynamic obstacles
 
 # Vehicle parameters
 vehicle_width:  0.5   # Vehicle width in meters

@@ -182,7 +182,7 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.Nobs*self.config.nobs + self.config.Ndynobs*self.config.nobs*self.config.N_hor + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
 
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         (xref , yref, thetaref, velref, omegaref) = (z0[5], z0[6], z0[7], z0[8], z0[9])
@@ -190,7 +190,7 @@ class MpcModule:
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
-        base = self.config.nz+self.config.Nobs*self.config.nobs
+        base = self.config.nz+self.config.Nobs*self.config.nobs+self.config.Ndynobs*self.config.nobs*self.config.N_hor
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
@@ -202,9 +202,20 @@ class MpcModule:
 
             cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
 
-            xs = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
-            ys = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
-            rs = z0[self.config.nz+2:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+            xs_static = z0[self.config.nz:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+            ys_static = z0[self.config.nz+1:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+            rs_static = z0[self.config.nz+2:self.config.nz+self.config.Nobs*self.config.nobs:self.config.nobs]
+
+            # ordering is x,y,r for obstacle 0 for N_hor timesteps, then x,y,r for obstalce 1 for N_hor timesteps etc.
+            end_of_static_obs_idx = self.config.nz + self.config.Nobs*self.config.nobs
+            end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.nobs*self.config.N_hor
+            xs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
+            ys_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+1:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
+            rs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+2:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
+
+            xs = cs.vertcat(xs_static,xs_dynamic)
+            ys = cs.vertcat(ys_static,ys_dynamic)
+            rs = cs.vertcat(rs_static,rs_dynamic)
 
             xdiff = x-xs
             ydiff = y-ys
