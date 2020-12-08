@@ -105,16 +105,18 @@ class PathGenerator:
         system_input = []  
         states = start.copy()
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
+        constraints = [0.0] * self.config.Nobs*self.config.nobs
+        refs = [0.0] * (self.config.N_hor * self.config.nx)
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
                 x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
                 
                 # Create constraints from verticies 
-                constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
-                constraints = [0.0] * self.config.Nobs*self.config.nobs
-                for i, origin in enumerate(constraint_origin):
-                    constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
+                if len(self.ppp.original_obstacle_list):
+                    constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
+                    for i, origin in enumerate(constraint_origin):
+                        constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
 
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points)
                 if (idx+self.config.N_hor >= len(x_ref)): 
@@ -134,7 +136,7 @@ class PathGenerator:
                 
                  
 
-                refs = [0.0] * (self.config.N_hor * self.config.nx)
+                
                 refs[0::self.config.nx] = tmpx
                 refs[1::self.config.nx] = tmpy
                 refs[2::self.config.nx] = tmpt
