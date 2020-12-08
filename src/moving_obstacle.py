@@ -38,11 +38,24 @@ start = list(g.start) + [math.radians(0)]
 end = list(g.end) + [math.radians(0)]
 
 obstacle_radius = 0.5
-obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(150/config.ts))]
-obs_pos1 = [(8.0, y, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for y in np.linspace(5.5,2,int(150/config.ts))]
-dyn_obs_list = [obs_pos, obs_pos1]
+#obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(150/config.ts))]
+p1 = [6.5, 5]
+p2 = [4.5, 7]
+freq = 0.1
+obs_pos = [(generate_obstacle(p1[0], p2[0], freq, t), generate_obstacle(p1[1], p2[1], freq, t), obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for t in np.linspace(0,150,1000)]
+#obs_pos1 = [(8.0, y, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for y in np.linspace(5.5,2,int(150/config.ts))]
+p1 = [17.5, 43]
+p2 = [22, 37.5]
+freq = 0.1
+obs_pos1 = [(generate_obstacle(p1[0], p2[0], freq, t), generate_obstacle(p1[1], p2[1], freq, t), obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for t in np.linspace(0,150,1000)]
 
-xx,xy,uv,uomega = path_gen.run(g, start, end, dyn_obs_list)
+p1 = [40.5, 18]
+p2 = [37, 26]
+freq = 0.1
+obs_pos2 = [(generate_obstacle(p1[0], p2[0], freq, t), generate_obstacle(p1[1], p2[1], freq, t), obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for t in np.linspace(0,150,1000)]
+dyn_obs_list = [obs_pos, obs_pos1, obs_pos2]
+
+xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end, dyn_obs_list)
 
 
 

@@ -101,7 +101,7 @@ class PathGenerator:
       
         terminal = False
         t=0
-        total_solver_time = 0
+        total_solver_time = []
 
         system_input = []  
         states = start.copy()
@@ -171,7 +171,7 @@ class PathGenerator:
                     '''ax.plot(states[0:-1:3], states[1:-1:3])
                     #plt.show()'''
                 
-                total_solver_time += solver_time
+                total_solver_time.append(solver_time)
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0):# and abs(states[-1]-end[-1])<0.5:
                     terminal = True
@@ -199,7 +199,7 @@ class PathGenerator:
         
         print("Total solution time: {} ms".format(total_time))
     
-        print("Total MPC solver time: {} ms".format(total_solver_time))
+        print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
 
 
         # Plot solution
@@ -212,4 +212,4 @@ class PathGenerator:
         
 
         
-        return xx,xy,uv,uomega    # uncomment if we want to return the traj
+        return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj

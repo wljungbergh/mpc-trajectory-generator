@@ -6,8 +6,7 @@ import math
 import time
 import os
 
-MAX_NUMBER_OF_OBSTACLES = 10
-MAX_SOVLER_TIME = 10_000_000
+MAX_SOVLER_TIME = 500_000
 
 
 class MpcModule:
@@ -286,7 +285,7 @@ class MpcModule:
             .with_optimizer_name(self.config.optimizer_name)
 
         solver_config = og.config.SolverConfiguration()\
-                .with_tolerance(1e-5)\
+                .with_tolerance(1e-4)\
                 .with_max_duration_micros(MAX_SOVLER_TIME)
 
         builder = og.builder.OpEnOptimizerBuilder(problem, 
