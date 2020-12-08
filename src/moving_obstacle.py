@@ -64,7 +64,7 @@ for i in range(len(xx)):
     path_line.set_data(xx[:i], xy[:i])
     veh = plt.Circle((xx[i], xy[i]), config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
     path_ax.add_artist(veh)
-    for j in len(dyn_obs_list):
+    for j in range(len(dyn_obs_list)):
         obs[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
         obs_padded[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
         path_ax.add_artist(obs_padded[j])
@@ -76,7 +76,7 @@ for i in range(len(xx)):
     plt.draw()
     plt.pause(config.ts)
     veh.remove()    
-    for j in len(dyn_obs_list):
+    for j in range(len(dyn_obs_list)):
         obs[j].remove()
         obs_padded[j].remove()
     
