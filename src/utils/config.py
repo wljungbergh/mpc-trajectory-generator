@@ -30,6 +30,7 @@ required_config_params = {
     'nu': 'Number of control inputs',
     'nobs': 'Number of variables per obstacles',
     'Nobs': 'Maximal number of obstacles',
+    'Ndynobs': 'Maximal number of dynamic obstacles',
     'vehicle_width': 'Vehicle width in meters',
     'vehicle_margin': 'Extra margin used for padding in meters',
     'build_type': "Can have 'debug' or 'release'",
