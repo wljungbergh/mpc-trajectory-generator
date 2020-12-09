@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+import math
 
 class Graph:
     def __init__(self, boundary_coordinates, obstacle_list, default_start, default_end, dyn_obs_list = []):
@@ -26,7 +27,7 @@ class Graphs:
             [(3.0, 3.0), (3.0, 7.0), (7.0, 7.0), (7.0, 3.0), ],
          ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1), (8,8)))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1, math.radians(0)), (8,8, math.radians(90))))
         
         ############### Second Graph ############################# 
         # To be specified in counter-clockwise ordering
@@ -39,7 +40,7 @@ class Graphs:
             [(12.0, 0.0),(12.0,7.5),(15.0,7.5),(15.0, 0.0)],
          ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,5), (19,10)))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,5, math.radians(45)), (19,10, math.radians(0))))
 
         ############### Third Graph ############################# 
         # To be specified in counter-clockwise ordering
@@ -61,7 +62,7 @@ class Graphs:
             [[40.5, 18], [37, 26], 0.1, 0.5]
         ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1), (5,20), dyn_obs_list))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1,math.radians(45)), (5,20,math.radians(270)), dyn_obs_list))
 
         ############### Forth Graph ############################# 
         # To be specified in counter-clockwise ordering
@@ -78,8 +79,17 @@ class Graphs:
                         [(26.9, 22.7), (41.4, 22.6), (41.1, 17.5), (27.4, 17.6)]
                         ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (30,5), (30,55)))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (30,5, math.radians(90)), (30,55, math.radians(90))))
 
+        ############### Fifth Graph ############################# 
+        # To be specified in counter-clockwise ordering
+        boundary_coordinates = [(54.0, 57.8), (7.8, 57.5), (7.5, 17.9), (53.0, 17.0)]
+
+
+        # To be specified in clock-wise ordering
+        obstacle_list= [[(14.0, 57.6), (42.1, 57.6), (42.2, 52.0), (13.4, 52.0)], [(7.7, 49.1), (32.2, 49.0), (32.1, 45.3), (7.7, 45.8)], [(34.2, 53.0), (41.2, 53.1), (40.9, 31.7), (34.4, 31.9)], [(35.7, 41.7), (35.7, 36.8), (11.7, 39.8), (12.1, 44.0), (31.3, 43.3)], [(5.8, 37.6), (24.1, 35.0), (23.6, 29.8), (5.0, 31.8)], [(27.1, 39.7), (32.7, 39.0), (32.8, 24.7), (16.2, 20.9), (14.5, 25.9), (25.3, 26.7), (27.9, 31.4), (26.1, 39.2)]]
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (10.3, 55.8, math.radians(270)), (38.1, 25.0, math.radians(300))))
+        
 
         ############### Fifth Graph ############################# 
         # To be specified in counter-clockwise ordering

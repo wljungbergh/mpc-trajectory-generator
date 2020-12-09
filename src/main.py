@@ -17,9 +17,9 @@ config = configurator.configurate()
 
 path_gen = PathGenerator(config, build=False)
 
-start = list(g.start) + [math.radians(45)]
-end = list(g.end) + [math.radians(270)]
-xx,xy,uv,uomega, tot_solver_time = path_gen.run(g, start, end)
+start = list(g.start)
+end = list(g.end)
+xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end)
 
 path_gen.plot_results(xx,xy,uv,uomega, start, end, dynamic=True)
 plt.show()
