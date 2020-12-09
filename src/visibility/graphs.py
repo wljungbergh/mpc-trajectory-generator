@@ -5,9 +5,10 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
 class Graph:
-    def __init__(self, boundary_coordinates, obstacle_list, default_start, default_end):
+    def __init__(self, boundary_coordinates, obstacle_list, default_start, default_end, dyn_obs_list = []):
         self.boundary_coordinates = boundary_coordinates
         self.obstacle_list = obstacle_list
+        self.dyn_obs_list = dyn_obs_list
         self.start = default_start
         self.end = default_end
 
@@ -54,7 +55,13 @@ class Graphs:
             [(32.0, 6.0), (32.0, 10.5), (42.0, 12.5), (42, 8.0)]
          ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1), (5,20)))
+        dyn_obs_list = [
+            [[6.5, 5], [4.5, 7], 0.1, 0.5], 
+            [[17.5, 43], [22, 37.5], 0.1, 0.5], 
+            [[40.5, 18], [37, 26], 0.1, 0.5]
+        ]
+
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1), (5,20), dyn_obs_list))
 
         ############### Forth Graph ############################# 
         # To be specified in counter-clockwise ordering
@@ -77,7 +84,6 @@ class Graphs:
         ############### Fifth Graph ############################# 
         # To be specified in counter-clockwise ordering
         boundary_coordinates = [(0,0), (0,10.0), (16,10.0), (16, 0)]
-
 
         # To be specified in clock-wise ordering
         obstacle_list = []
