@@ -118,9 +118,9 @@ class PathGenerator:
             path_ax.add_artist(veh)
             for j, obstacle in enumerate(self.ppp.dyn_obs_list):
                 p1,p2,freq,obstacle_radius = obstacle
-                pos = path_gen.ppp.generate_obstacle(p1,p2, freq, i * self.config.ts)
+                pos = self.ppp.generate_obstacle(p1,p2, freq, i * self.config.ts)
                 obs[j] = plt.Circle(pos, obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
-                obs_padded[j] = plt.Circle(pos, obstacle_radius + self.vehicle_width/2 + self.config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+                obs_padded[j] = plt.Circle(pos, obstacle_radius + self.config.vehicle_width/2 + self.config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
                 path_ax.add_artist(obs_padded[j])
                 path_ax.add_artist(obs[j])
             
