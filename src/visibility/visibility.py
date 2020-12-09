@@ -35,10 +35,6 @@ def plot_vertices(vertices, radius,  ax):
 
 
 #########
-class Config:
-    def __init__(self):
-        self.vehicle_width = 0.5
-
 
 class PathPreProcessor:
     def __init__(self, config, plotting = False):
@@ -52,6 +48,7 @@ class PathPreProcessor:
 
     def prepare(self, graph_map):
 
+        self.dyn_obs_list = graph_map.dyn_obs_list.copy()
         # Obstacles
         self.original_obstacle_list = graph_map.obstacle_list.copy()
         # Pre-proccess obstacles
@@ -151,6 +148,31 @@ class PathPreProcessor:
         # self.vert_copy.sort(key = lambda x: self.dist_between_points(current_pos, x))
         # return self.vert.copy()[:n_vertices]
         ######
+
+    @staticmethod
+    def generate_obstacle(p1, p2, freq, time):
+        p1 = np.array(p1)
+        p2 = np.array(p2)
+        time = np.array(time)
+        t = abs(np.sin(freq * time))
+        if type(t) == np.ndarray:
+            t = np.expand_dims(t,1)
+    
+        p3 = t*p1 + (1-t)*p2
+        return p3
+
+
+    def get_dyn_obstacle(self, t, horizon):
+        time = np.linspace(t, t+horizon*self.config.ts, self.config.ts)
+        obs_list = []
+        for obs in self.dyn_obs_list:
+            p1, p2, freq, obstacle_radius = obs
+            padded_obstacle_radius = obstacle_radius+self.config.vehicle_width/2+self.config.vehicle_margin
+            obs_list.append([(*generate_obstacle(p1, p2, freq, t), padded_obstacle_radius) for t in time])
+
+        return obs_list
+
+
 
     def plot_all(self, ax):
         plot_boundaries(self.original_boundary_coordinates, ax, c='k', label = 'Original Boundary')
