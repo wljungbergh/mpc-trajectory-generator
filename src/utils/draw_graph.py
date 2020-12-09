@@ -95,14 +95,30 @@ class ExampleApp(tk.Tk):
 
     def finish(self):
         self.close_window()
+    def is_clock_wise(self, poly):
+        # based on https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order/1180256#1180256
+        sum = 0
+        for i, point in enumerate(poly):
+            if i < len(poly)-1:
+                sum += (poly[i+1][0]-point[0])*(poly[i+1][1]+point[1])
+            else:
+                sum += (poly[0][0]-point[0])*(poly[0][1]+point[1])
+        return sum >= 0
 
     def close_window(self):
         scaled_boundary = [(x/self.scale, (600-y)/self.scale) for (x,y) in self.boundary_points]
+        if not self.is_clock_wise(scaled_boundary):
+            scaled_boundary = scaled_boundary.reverse()
+
         print(f"Boundary coordinates: {scaled_boundary}")
 
         scaled_polygons = []
         for poly in self.polygon_points:
-            scaled_polygons.append([(x/self.scale, (600-y)/self.scale) for (x,y) in poly])
+            poly = [(x/self.scale, (600-y)/self.scale) for (x,y) in poly]
+            if self.is_clock_wise(poly):
+                scaled_polygons.append(poly.reverse())
+            else:
+                scaled_polygons.append(poly)
         print(f"Obstacle coordinates: {scaled_polygons}")
 
         scaled_start = [(x/self.scale, (600-y)/self.scale) for (x,y) in self.start_position]
