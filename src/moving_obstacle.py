@@ -24,7 +24,7 @@ def generate_obstacle(p1, p2, freq, time):
     return p3
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=2)
+g = graphs.get_graph(complexity=1)
 file_path = Path(__file__)
 
 config_fn = 'jconf_1.yaml'
@@ -55,7 +55,7 @@ freq = 0.1
 obs_pos2 = [(generate_obstacle(p1[0], p2[0], freq, t), generate_obstacle(p1[1], p2[1], freq, t), obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for t in np.linspace(0,150,1000)]
 dyn_obs_list = [obs_pos, obs_pos1, obs_pos2]
 
-xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end, dyn_obs_list)
+xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end)
 
 
 
@@ -84,17 +84,18 @@ legend_elems = [  Line2D([0], [0], color='k', label='Original Boundary' ),
                     mpatches.Patch(color='y', label='Padded obstacle')
                             ]
 path_ax.legend(handles = legend_elems)
-obs = [object] * len(dyn_obs_list)
-obs_padded = [object] * len(dyn_obs_list)
+obs = [object] * len(g.dyn_obs_list)
+obs_padded = [object] * len(g.dyn_obs_list)
 
 for i in range(len(xx)):
     path_line.set_data(xx[:i], xy[:i])
     veh = plt.Circle((xx[i], xy[i]), config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
     path_ax.add_artist(veh)
-    for j in range(len(dyn_obs_list)):
-        obs_pos = dyn_obs_list[j]
-        obs[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
-        obs_padded[j] = plt.Circle((obs_pos[i][0], obs_pos[i][1]), obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+    for j, obstacle in enumerate(g.dyn_obs_list):
+        p1,p2,freq,obstacle_radius = obstacle
+        pos = path_gen.ppp.generate_obstacle(p1,p2, freq, i * config.ts)
+        obs[j] = plt.Circle(pos, obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
+        obs_padded[j] = plt.Circle(pos, obstacle_radius + config.vehicle_width/2 + config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
         path_ax.add_artist(obs_padded[j])
         path_ax.add_artist(obs[j])
     
@@ -102,9 +103,9 @@ for i in range(len(xx)):
     
     
     plt.draw()
-    plt.pause(config.ts/10)
+    plt.pause(self.config.ts / 10)
     veh.remove()    
-    for j in range(len(dyn_obs_list)):
+    for j in range(len(g.dyn_obs_list)):
         obs[j].remove()
         obs_padded[j].remove()
     

@@ -163,12 +163,12 @@ class PathPreProcessor:
 
 
     def get_dyn_obstacle(self, t, horizon):
-        time = np.linspace(t, t+horizon*self.config.ts, self.config.ts)
+        time = np.linspace(t, t+horizon*self.config.ts, horizon)
         obs_list = []
         for obs in self.dyn_obs_list:
             p1, p2, freq, obstacle_radius = obs
             padded_obstacle_radius = obstacle_radius+self.config.vehicle_width/2+self.config.vehicle_margin
-            obs_list.append([(*generate_obstacle(p1, p2, freq, t), padded_obstacle_radius) for t in time])
+            obs_list.append([(*self.generate_obstacle(p1, p2, freq, t), padded_obstacle_radius) for t in time])
 
         return obs_list
 
