@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=2)
+g = graphs.get_graph(complexity=1)
 file_path = Path(__file__)
 
 config_fn = 'jconf_1.yaml'
@@ -19,7 +19,7 @@ path_gen = PathGenerator(config, build=False)
 
 start = list(g.start) + [math.radians(45)]
 end = list(g.end) + [math.radians(270)]
-xx,xy,uv,uomega = path_gen.run(g, start, end)
+xx,xy,uv,uomega, tot_solver_time = path_gen.run(g, start, end)
 
-path_gen.plot_result(xx,xy,uv,uomega, start, end)
+path_gen.plot_results(xx,xy,uv,uomega, start, end, dynamic=True)
 plt.show()

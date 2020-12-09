@@ -6,6 +6,7 @@ import numpy as np
 import time
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import math
 import itertools
@@ -22,7 +23,13 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    def plot_result(self, xx, xy, vel, omega, start, end):
+    def plot_results(self, xx, xy, vel, omega, start, end, dynamic = False):
+        if dynamic:
+            self.plot_dynamic_results(xx, xy, vel, omega, start, end)
+        else:
+            self.plot_static_results(xx, xy, vel, omega, start, end)
+
+    def plot_static_results(self, xx, xy, vel, omega, start, end):
         fig = plt.figure(constrained_layout = True)
         gs = GridSpec(2, 4, figure=fig)
 
@@ -57,7 +64,76 @@ class PathGenerator:
         path_ax.legend(handles = legend_elems)
         path_ax.axis('equal')
 
+    def plot_dynamic_results(self, xx, xy, vel, omega, start, end):
+        fig = plt.figure(constrained_layout = True)
+        gs = GridSpec(2, 4, figure=fig)
 
+        vel_ax = fig.add_subplot(gs[0,:2])
+        vel_line, = vel_ax.plot([1], '-o', markersize = 4, linewidth=2)
+        vel_ax.set_xlabel('Time [s]')
+        vel_ax.set_ylabel('Velocity [m/s]')
+        vel_ax.set_ylim(-self.config.lin_vel_max - 0.1, self.config.lin_vel_max + 0.1)
+        vel_ax.set_xlim(0, self.config.ts * len(xx))
+        vel_ax.grid('on')
+
+        omega_ax = fig.add_subplot(gs[1,:2])
+        omega_line, = omega_ax.plot([1], '-o', markersize = 4, linewidth=2)
+        omega_ax.set_ylim(-self.config.ang_vel_max - 0.1, self.config.ang_vel_max + 0.1)
+        omega_ax.set_xlim(0, self.config.ts * len(xx))
+        omega_ax.grid('on')
+        omega_ax.set_xlabel('Time [s]')
+        omega_ax.set_ylabel('Angular velocity [rad/s]')
+
+        path_ax =  fig.add_subplot(gs[:,2:])
+        path_ax.plot(start[0], start[1], marker='*', color='g', markersize = 15, label='Start')
+        path_ax.plot(end[0], end[1], marker='*', color='r', markersize = 15,label='End')
+        self.ppp.plot_all(path_ax)
+        path_line, = path_ax.plot([1], '-ob', alpha =0.7, markersize=5)
+        path_ax.set_xlabel('X [m]', fontsize = 15)
+        path_ax.set_ylabel('Y [m]', fontsize = 15)
+        path_ax.axis('equal')
+
+        legend_elems = [  Line2D([0], [0], color='k', label='Original Boundary' ),
+                            Line2D([0], [0], color='g', label='Padded Boundary'),
+                            Line2D([0], [0], marker='o', color='b', label='Traversed Path', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='g', label='Start Position', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='r', label='End Position'),
+                            mpatches.Patch(color='b', label='Robot'),
+                            mpatches.Patch(color='r', label='Obstacle'),
+                            mpatches.Patch(color='y', label='Padded obstacle')
+                                    ]
+        path_ax.legend(handles = legend_elems)
+        obs = [object] * len(self.ppp.dyn_obs_list)
+        obs_padded = [object] * len(self.ppp.dyn_obs_list)
+
+        for i in range(len(xx)):
+            time = np.linspace(0, self.config.ts*i, i)
+            omega_line.set_data(time, omega[:i])
+            vel_line.set_data(time, vel[:i])
+            path_line.set_data(xx[:i], xy[:i])
+            
+
+
+            veh = plt.Circle((xx[i], xy[i]), self.config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
+            path_ax.add_artist(veh)
+            for j, obstacle in enumerate(self.ppp.dyn_obs_list):
+                p1,p2,freq,obstacle_radius = obstacle
+                pos = path_gen.ppp.generate_obstacle(p1,p2, freq, i * self.config.ts)
+                obs[j] = plt.Circle(pos, obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
+                obs_padded[j] = plt.Circle(pos, obstacle_radius + self.vehicle_width/2 + self.config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+                path_ax.add_artist(obs_padded[j])
+                path_ax.add_artist(obs[j])
+            
+
+            plt.draw()
+            plt.pause(self.config.ts / 10)
+            veh.remove()    
+            for j in range(len(self.ppp.dyn_obs_list)):
+                obs[j].remove()
+                obs_padded[j].remove()
+            
+
+        plt.show()
 
     def run(self, graph_map, start, end):
         """

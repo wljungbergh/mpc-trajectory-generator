@@ -60,12 +60,26 @@ xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end)
 
 
 fig = plt.figure(constrained_layout = True)
-gs = GridSpec(1, 1, figure=fig)
 
-path_ax =  fig.add_subplot(gs[0,0])
+gs = GridSpec(2, 4, figure=fig)
 
+vel_ax = fig.add_subplot(gs[0,:2])
+vel_line, = vel_ax.plot([1], '-o', markersize = 4, linewidth=2)
+vel_ax.set_xlabel('Time [s]')
+vel_ax.set_ylabel('Velocity [m/s]')
+vel_ax.set_ylim(-config.lin_vel_max - 0.1, config.lin_vel_max + 0.1)
+vel_ax.set_xlim(0, config.ts * len(xx))
+vel_ax.grid('on')
 
+omega_ax = fig.add_subplot(gs[1,:2])
+omega_line, = omega_ax.plot([1], '-o', markersize = 4, linewidth=2)
+omega_ax.set_ylim(-config.ang_vel_max - 0.1, config.ang_vel_max + 0.1)
+omega_ax.set_xlim(0, config.ts * len(xx))
+omega_ax.grid('on')
+omega_ax.set_xlabel('Time [s]')
+omega_ax.set_ylabel('Angular velocity [rad/s]')
 
+path_ax =  fig.add_subplot(gs[:,2:])
 path_ax.plot(start[0], start[1], marker='*', color='g', markersize = 15, label='Start')
 path_ax.plot(end[0], end[1], marker='*', color='r', markersize = 15,label='End')
 path_gen.ppp.plot_all(path_ax)
@@ -84,11 +98,17 @@ legend_elems = [  Line2D([0], [0], color='k', label='Original Boundary' ),
                     mpatches.Patch(color='y', label='Padded obstacle')
                             ]
 path_ax.legend(handles = legend_elems)
-obs = [object] * len(g.dyn_obs_list)
+obs = [object] * len(self.ppp..dyn_obs_list)
 obs_padded = [object] * len(g.dyn_obs_list)
 
 for i in range(len(xx)):
+    time = np.linspace(0, config.ts*i, i)
+    omega_line.set_data(time, uomega[:i])
+    vel_line.set_data(time, uv[:i])
     path_line.set_data(xx[:i], xy[:i])
+    
+
+
     veh = plt.Circle((xx[i], xy[i]), config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
     path_ax.add_artist(veh)
     for j, obstacle in enumerate(g.dyn_obs_list):
@@ -100,8 +120,6 @@ for i in range(len(xx)):
         path_ax.add_artist(obs[j])
     
 
-    
-    
     plt.draw()
     plt.pause(config.ts / 10)
     veh.remove()    
