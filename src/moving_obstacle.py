@@ -103,7 +103,7 @@ for i in range(len(xx)):
     
     
     plt.draw()
-    plt.pause(self.config.ts / 10)
+    plt.pause(config.ts / 10)
     veh.remove()    
     for j in range(len(g.dyn_obs_list)):
         obs[j].remove()
