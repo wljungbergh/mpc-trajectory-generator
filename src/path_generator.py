@@ -59,7 +59,7 @@ class PathGenerator:
 
 
 
-    def run(self, graph_map, start, end, dyn_obs=[]):
+    def run(self, graph_map, start, end):
         """
         Parameters
         ----------
