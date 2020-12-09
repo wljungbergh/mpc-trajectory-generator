@@ -19,12 +19,12 @@ path_gen = PathGenerator(config, build=False)
 
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=2)
+g = graphs.get_graph(complexity=7)
 
-start = list(g.start) + [math.radians(90)]
-end = list(g.end) + [math.radians(90)]
+start = list(g.start)
+end = list(g.end)
 
-xx,xy,uv,uomega = path_gen.run(g, start, end)
+xx,xy,uv,uomega,_ = path_gen.run(g, start, end)
 
 fig, ax = plt.subplots(2,1)
 fig.set_figheight(6)
