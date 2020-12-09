@@ -101,6 +101,30 @@ class Graphs:
         self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,5), (15,5)))
 
 
+        ############### Sixth Graph ############################# 
+        # To be specified in counter-clockwise ordering
+        boundary_coordinates = [(0.37, 0.32), (5.79, 0.31), (5.79, 5.18), (0.14, 5.26)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(2.04, 0.28), (2.0, 3.8), (2.8, 3.81), (2.78, 0.29)]]
+        start_pos = (1.01, 0.98, math.radians(90))
+        end_pos = (3.82, 1.05, math.radians(270))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
+
+
+        ############### Seventh Graph ############################# 
+        # NOTE: Not always working
+        # To be specified in counter-clockwise ordering
+        boundary_coordinates = [(1.55, 1.15), (29.0, 1.1), (29.0, 28.75), (0.85, 28.9), (0.85, 1.15)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(5.6, 3.3), (5.75, 20.15), (18.35, 20.05), (18.35, 19.7), (7.25, 19.7), (7.05, 3.2)], [(13.85, 23.4), (21.25, 23.35), (21.1, 16.4), (6.9, 16.35), (6.7, 12.9), (23.45, 13.25), (23.4, 25.05), (13.0, 25.35)]]
+        start_pos = (2.95, 13.5, math.radians(90))
+        end_pos = (9.6, 18.1, math.radians(180))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
+
+        
+
         self.min_complexity = 0
         self.max_complexity = len(self.graphs) - 1
 
