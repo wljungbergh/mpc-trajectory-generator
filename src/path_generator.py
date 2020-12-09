@@ -6,8 +6,10 @@ import numpy as np
 import time
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import math
+import itertools
 
 class PathGenerator:
     """ Class responsible for generating a smooth trajectory based on inital preproccsing 
@@ -21,7 +23,13 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    def plot_result(self, xx, xy, vel, omega, start, end):
+    def plot_results(self, xx, xy, vel, omega, start, end, dynamic = False):
+        if dynamic:
+            self.plot_dynamic_results(xx, xy, vel, omega, start, end)
+        else:
+            self.plot_static_results(xx, xy, vel, omega, start, end)
+
+    def plot_static_results(self, xx, xy, vel, omega, start, end):
         fig = plt.figure(constrained_layout = True)
         gs = GridSpec(2, 4, figure=fig)
 
@@ -56,7 +64,76 @@ class PathGenerator:
         path_ax.legend(handles = legend_elems)
         path_ax.axis('equal')
 
+    def plot_dynamic_results(self, xx, xy, vel, omega, start, end):
+        fig = plt.figure(constrained_layout = True)
+        gs = GridSpec(2, 4, figure=fig)
 
+        vel_ax = fig.add_subplot(gs[0,:2])
+        vel_line, = vel_ax.plot([1], '-o', markersize = 4, linewidth=2)
+        vel_ax.set_xlabel('Time [s]')
+        vel_ax.set_ylabel('Velocity [m/s]')
+        vel_ax.set_ylim(-self.config.lin_vel_max - 0.1, self.config.lin_vel_max + 0.1)
+        vel_ax.set_xlim(0, self.config.ts * len(xx))
+        vel_ax.grid('on')
+
+        omega_ax = fig.add_subplot(gs[1,:2])
+        omega_line, = omega_ax.plot([1], '-o', markersize = 4, linewidth=2)
+        omega_ax.set_ylim(-self.config.ang_vel_max - 0.1, self.config.ang_vel_max + 0.1)
+        omega_ax.set_xlim(0, self.config.ts * len(xx))
+        omega_ax.grid('on')
+        omega_ax.set_xlabel('Time [s]')
+        omega_ax.set_ylabel('Angular velocity [rad/s]')
+
+        path_ax =  fig.add_subplot(gs[:,2:])
+        path_ax.plot(start[0], start[1], marker='*', color='g', markersize = 15, label='Start')
+        path_ax.plot(end[0], end[1], marker='*', color='r', markersize = 15,label='End')
+        self.ppp.plot_all(path_ax)
+        path_line, = path_ax.plot([1], '-ob', alpha =0.7, markersize=5)
+        path_ax.set_xlabel('X [m]', fontsize = 15)
+        path_ax.set_ylabel('Y [m]', fontsize = 15)
+        path_ax.axis('equal')
+
+        legend_elems = [  Line2D([0], [0], color='k', label='Original Boundary' ),
+                            Line2D([0], [0], color='g', label='Padded Boundary'),
+                            Line2D([0], [0], marker='o', color='b', label='Traversed Path', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='g', label='Start Position', alpha = 0.5),
+                            Line2D([0], [0], marker='*', color='r', label='End Position'),
+                            mpatches.Patch(color='b', label='Robot'),
+                            mpatches.Patch(color='r', label='Obstacle'),
+                            mpatches.Patch(color='y', label='Padded obstacle')
+                                    ]
+        path_ax.legend(handles = legend_elems)
+        obs = [object] * len(self.ppp.dyn_obs_list)
+        obs_padded = [object] * len(self.ppp.dyn_obs_list)
+
+        for i in range(len(xx)):
+            time = np.linspace(0, self.config.ts*i, i)
+            omega_line.set_data(time, omega[:i])
+            vel_line.set_data(time, vel[:i])
+            path_line.set_data(xx[:i], xy[:i])
+            
+
+
+            veh = plt.Circle((xx[i], xy[i]), self.config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
+            path_ax.add_artist(veh)
+            for j, obstacle in enumerate(self.ppp.dyn_obs_list):
+                p1,p2,freq,obstacle_radius = obstacle
+                pos = path_gen.ppp.generate_obstacle(p1,p2, freq, i * self.config.ts)
+                obs[j] = plt.Circle(pos, obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
+                obs_padded[j] = plt.Circle(pos, obstacle_radius + self.vehicle_width/2 + self.config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+                path_ax.add_artist(obs_padded[j])
+                path_ax.add_artist(obs[j])
+            
+
+            plt.draw()
+            plt.pause(self.config.ts / 10)
+            veh.remove()    
+            for j in range(len(self.ppp.dyn_obs_list)):
+                obs[j].remove()
+                obs_padded[j].remove()
+            
+
+        plt.show()
 
     def run(self, graph_map, start, end):
         """
@@ -100,24 +177,30 @@ class PathGenerator:
       
         terminal = False
         t=0
-        total_solver_time = 0
+        total_solver_time = []
 
         system_input = []  
         states = start.copy()
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
-        idx = 0 
+        refs = [0.0] * (self.config.N_hor * self.config.nx)
+        idx = 0
+        constraints = [0.0] * self.config.Nobs*self.config.nobs
+        dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
+        params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
                 x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
-                
+                if len(self.ppp.original_obstacle_list):
                 # Create constraints from verticies 
-                constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
-                constraints = [0.0] * self.config.Nobs*self.config.nobs
-                for i, origin in enumerate(constraint_origin):
-                    constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
+                    constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
+                    for i, origin in enumerate(constraint_origin):
+                        constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
                 
-                # reduce search space 
+                for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor)):
+                    dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(itertools.chain(*dyn_obstacle))
+                    
+                # reduce search space for closest reference point TODO: how to select "5"?
                 lb_idx = max(0,idx-5*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points[lb_idx:ub_idx])
@@ -139,7 +222,7 @@ class PathGenerator:
                 
                  
 
-                refs = [0.0] * (self.config.N_hor * self.config.nx)
+                
                 refs[0::self.config.nx] = tmpx
                 refs[1::self.config.nx] = tmpy
                 refs[2::self.config.nx] = tmpt
@@ -149,7 +232,7 @@ class PathGenerator:
                 else:
                     last_u = [0.0] * self.config.nu
 
-                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+refs
+                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+dyn_constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
@@ -164,7 +247,7 @@ class PathGenerator:
                     '''ax.plot(states[0:-1:3], states[1:-1:3])
                     #plt.show()'''
                 
-                total_solver_time += solver_time
+                total_solver_time.append(solver_time)
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0):# and abs(states[-1]-end[-1])<0.5:
                     terminal = True
@@ -192,7 +275,7 @@ class PathGenerator:
         
         print("Total solution time: {} ms".format(total_time))
     
-        print("Total MPC solver time: {} ms".format(total_solver_time))
+        print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
 
 
         # Plot solution
@@ -205,4 +288,4 @@ class PathGenerator:
         
 
         
-        return xx,xy,uv,uomega    # uncomment if we want to return the traj
+        return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj
