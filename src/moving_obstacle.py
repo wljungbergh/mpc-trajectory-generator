@@ -16,7 +16,7 @@ def generate_obstacle(p1, p2, freq, time):
     p1 = np.array(p1)
     p2 = np.array(p2)
     time = np.array(time)
-    t = abs(np.sin(freq * time))
+    t = 0.5*np.sin(freq * time)+0.5
     if type(t) == np.ndarray:
         t = np.expand_dims(t,1)
    
@@ -39,7 +39,7 @@ end = list(g.end) + [math.radians(0)]
 
 obstacle_radius = 0.5
 #obs_pos = [(x, 5.0, obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for x in np.linspace(10,5,int(150/config.ts))]
-p1 = [6.5, 5]
+p1 = [6, 5.5]
 p2 = [4.5, 7]
 freq = 0.1
 obs_pos = [(generate_obstacle(p1[0], p2[0], freq, t), generate_obstacle(p1[1], p2[1], freq, t), obstacle_radius+config.vehicle_width/2+config.vehicle_margin) for t in np.linspace(0,150,1000)]
