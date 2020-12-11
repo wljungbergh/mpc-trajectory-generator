@@ -123,6 +123,39 @@ class Graphs:
         end_pos = (9.6, 18.1, math.radians(180))
         self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
 
+
+        ############### Eigth Graph ############################# 
+        # To be specified in counter-clockwise ordering
+        boundary_coordinates = [(2.0, 1.08), (22.8, 1.12), (22.84, 19.16), (1.8, 19.24)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(9.64, 5.28), (9.56, 10.72), (8.68, 11.88), (9.48, 12.2), (10.52, 10.96), (11.6, 12.12), (12.6, 11.36), (11.28, 10.4), (11.6, 0.56), (9.68, 0.68)]]
+        start_pos = (7.16, 8.16, math.radians(90))
+        end_pos = (12.72, 9.32, math.radians(265))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
+
+        ############### Ninth Graph ############################# 
+        # To be specified in counter-clockwise ordering
+        #NOTE: Does not always work. Gets stuck
+        boundary_coordinates = [(0.96, 1.88), (22.88, 1.72), (22.92, 20.8), (0.64, 20.92)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(9.12, 1.48), (8.8, 9.56), (9.76, 12.72), (10.8, 9.56), (11.08, 1.48)]]
+        start_pos = (7.44, 6.16, math.radians(90))
+        end_pos = (12.44, 6.4, math.radians(265))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
+
+        ############### Tenth Graph ############################# 
+        # To be specified in counter-clockwise ordering
+
+        boundary_coordinates = [(2.36, 1.6), (22.6, 1.84), (22.16, 21.04), (1.52, 20.88)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(9.92, 1.24), (9.64, 8.52), (12.6, 10.44), (15.6, 8.76), (15.76, 1.08)]]
+        start_pos = (7.08, 5.88, math.radians(90))
+        end_pos = (17.8, 6.56, math.radians(265))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
+
         
 
         self.min_complexity = 0
