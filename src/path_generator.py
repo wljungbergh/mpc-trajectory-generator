@@ -159,7 +159,7 @@ class PathGenerator:
         mng.start()
         mng.ping()
         
-        parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.lin_acc_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
+        parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         
         tt = time.time()
         if self.verbose:
@@ -187,6 +187,8 @@ class PathGenerator:
         constraints = [0.0] * self.config.Nobs*self.config.nobs
         dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
+        base_speed = self.config.lin_vel_max*self.config.throttle_ratio
+        num_steps_vel_red = 10
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -207,10 +209,9 @@ class PathGenerator:
                 idx += lb_idx #idx in orignal list
                 if (idx+self.config.N_hor >= len(x_ref)): 
                     x_finish = end
-                    tmp = min(len(x_ref)-1, idx)
-                    tmpx = x_ref[tmp:] + [end[0]] * (self.config.N_hor - (len(x_ref)-tmp))
-                    tmpy = y_ref[tmp:] + [end[1]] * (self.config.N_hor - (len(y_ref)-tmp))
-                    tmpt = theta_ref[tmp:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-tmp))
+                    tmpx = x_ref[idx:] + [end[0]] * (self.config.N_hor - (len(x_ref)-idx))
+                    tmpy = y_ref[idx:] + [end[1]] * (self.config.N_hor - (len(y_ref)-idx))
+                    tmpt = theta_ref[idx:] + [end[2]] * (self.config.N_hor - (len(theta_ref)-idx))
                 else:
                     x_finish = [x_ref[idx+self.config.N_hor],
                                 y_ref[idx+self.config.N_hor],
@@ -220,6 +221,10 @@ class PathGenerator:
                     tmpy = y_ref[idx:idx+self.config.N_hor]
                     tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
+                if (idx+self.config.N_hor) >= len(x_ref)-num_steps_vel_red:
+                    vel_ref = [max(0,min(base_speed,base_speed*(len(x_ref)-1-i)/(num_steps_vel_red))) for i in range(idx, idx+self.config.N_hor)]
+                else:
+                    vel_ref = [base_speed] * self.config.N_hor
                  
 
                 
@@ -232,7 +237,7 @@ class PathGenerator:
                 else:
                     last_u = [0.0] * self.config.nu
 
-                parameters = x_init+last_u+x_finish+last_u+parameter_list+constraints+dyn_constraints+refs
+                parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                 except RuntimeError as err:
@@ -249,7 +254,7 @@ class PathGenerator:
                 
                 total_solver_time.append(solver_time)
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0):# and abs(states[-1]-end[-1])<0.5:
+                if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0):# and abs(states[-1]-end[-1])<0.5:
                     terminal = True
                     
                     print("[MPC] MPC solution found.")
