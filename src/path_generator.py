@@ -20,6 +20,8 @@ class PathGenerator:
         self.verbose = verbose
         self.ppp = PathPreProcessor(self.config)
         self.mpc_generator = MpcModule(self.config)
+        self.time_dict = dict()
+        
         if build:
             self.mpc_generator.build()
 
@@ -155,22 +157,30 @@ class PathGenerator:
         None.
 
         """
+        t_temp = time.time() # Used to check run time for specific functions
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
         mng.ping()
+        self.time_dict["opt_launch"] = int(1000*(time.time()-t_temp))
         
         parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.lin_acc_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
-        
-        tt = time.time()
+        tt = time.time() # for entire run time
         if self.verbose:
             print("[MPC] Building visibility graph")
-        self.ppp.prepare(graph_map)
+        t_temp = time.time()
+        self.ppp.prepare(graph_map)  
+        self.time_dict["prepare"] =int(1000*(time.time()-t_temp))
         if self.verbose:
             print("[MPC] Findig A* solution")
+        t_temp = time.time()
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
+        self.time_dict["initial_guess"] = int(1000*(time.time()-t_temp))
         if self.verbose:
             print("[MPC] Getting rough reference")
+        t_temp = time.time()
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
+        self.time_dict["rough_ref"] = int(1000*(time.time()-t_temp))
+        t_temp = time.time()
         #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
         if self.verbose:
             print("[MPC] Rough reference was succedfully generated")
@@ -187,6 +197,7 @@ class PathGenerator:
         constraints = [0.0] * self.config.Nobs*self.config.nobs
         dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
+        t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -272,12 +283,16 @@ class PathGenerator:
         mng.kill()
         
         total_time = int(1000*(time.time()-tt))
+        mpc_time = int(1000*(time.time()-t_temp))
         
         print("Total solution time: {} ms".format(total_time))
     
         print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
-
-
+        
+        self.time_dict["mpc_time"] = mpc_time
+        self.time_dict["solver_time"] = sum(total_solver_time)
+        self.time_dict["total_time"] = total_time
+        
         # Plot solution
         # ------------------------------------
         nx = self.config.nx
@@ -286,6 +301,36 @@ class PathGenerator:
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-
+        self.runtime_analysis()
         
         return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj
+    
+    
+    
+    def runtime_analysis(self,file_name =''):
+        
+        #if len(self.time_dict):
+         #   print('There are no time entries run program before runtime analysis...')
+          #  return
+        print('###############################')
+        print('####### Runtime Analysis ######')
+        print('###############################')
+        print("Launching optimizer : {} ms".format(self.time_dict["opt_launch"]))
+        print("Prepare visibility graph : {} ms".format(self.time_dict["prepare"]))
+        print("Generate rough reference path : {} ms".format(self.time_dict["rough_ref"]))
+        print("MPC loop  : {} ms".format(self.time_dict["mpc_time"]))
+        print("MPC loop solver : {} ms".format(int(self.time_dict["solver_time"])))
+        print("MPC loop estimated python overhead : {} ms".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
+        print("Total : {} ms".format(self.time_dict["total_time"]))
+        
+        print('###############################')
+        
+    #ToDo add a write to file if a file_name has been provided
+        
+        
+        
+        
+        
+        
+        
+        
