@@ -285,13 +285,13 @@ class PathGenerator:
         total_time = int(1000*(time.time()-tt))
         mpc_time = int(1000*(time.time()-t_temp))
         
-        print("Total solution time: {} ms".format(total_time))
-    
-        print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
+        #print("Total solution time: {} ms".format(total_time))
+        #print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
         
         self.time_dict["mpc_time"] = mpc_time
         self.time_dict["solver_time"] = sum(total_solver_time)
         self.time_dict["total_time"] = total_time
+        self.runtime_analysis()
         
         # Plot solution
         # ------------------------------------
@@ -301,31 +301,64 @@ class PathGenerator:
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-        self.runtime_analysis()
         
         return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj
     
     
     
     def runtime_analysis(self,file_name =''):
+        """
+        Function that prints out a runtime analysis of the runtime 
+        functions. If the function is called with a string argument containing
+        a valid filename it will log the information to a file.
+        Parameters
+        ----------
+        file_name : TYPE, string
+            DESCRIPTION. Default '' incase no file logging is desired.
+            
+        Returns
+        -------
+        None.
+
+        """
         
-        #if len(self.time_dict):
-         #   print('There are no time entries run program before runtime analysis...')
-          #  return
-        print('###############################')
-        print('####### Runtime Analysis ######')
-        print('###############################')
-        print("Launching optimizer : {} ms".format(self.time_dict["opt_launch"]))
-        print("Prepare visibility graph : {} ms".format(self.time_dict["prepare"]))
+        
+        if not len(self.time_dict):
+            print('There are no time entries run program before runtime analysis...')
+            return
+        print(70*'#')
+        print(' Runtime Analysis ({}) '.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
+        print(70*'#')
+        print("Launching optimizer           : {} ms".format(self.time_dict["opt_launch"]))
+        print("Prepare visibility graph      : {} ms".format(self.time_dict["prepare"]))
         print("Generate rough reference path : {} ms".format(self.time_dict["rough_ref"]))
-        print("MPC loop  : {} ms".format(self.time_dict["mpc_time"]))
-        print("MPC loop solver : {} ms".format(int(self.time_dict["solver_time"])))
-        print("MPC loop estimated python overhead : {} ms".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
-        print("Total : {} ms".format(self.time_dict["total_time"]))
+        print("MPC loop                      : {} ms".format(self.time_dict["mpc_time"]))
+        print("MPC loop solver               : {} ms".format(int(self.time_dict["solver_time"])))
+        print("MPC loop python overhead      : {} ms".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
+        print("Total                         : {} ms".format(self.time_dict["total_time"]))
         
-        print('###############################')
+        print(70*'#')
         
-    #ToDo add a write to file if a file_name has been provided
+        if file_name=='':
+            # exits function if no file name is provided
+            return
+
+        try:
+            file = open(file_name,"a")
+            file.write('############################### \n')
+            file.write('Runtime Analysis ({}) \n'.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
+            file.write('###############################\n')
+            file.write("Launching optimizer           : {} ms\n".format(self.time_dict["opt_launch"]))
+            file.write("Prepare visibility graph      : {} ms\n".format(self.time_dict["prepare"]))
+            file.write("Generate rough reference path : {} ms\n".format(self.time_dict["rough_ref"]))
+            file.write("MPC loop                      : {} ms\n".format(self.time_dict["mpc_time"]))
+            file.write("MPC loop solver               : {} ms \n".format(int(self.time_dict["solver_time"])))
+            file.write("MPC loop python overhead      : {} ms\n".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
+            file.write("Total                         : {} ms\n".format(self.time_dict["total_time"]))          
+            file.write('############################### \n \n \n')
+            file.close()    
+        except OSError:
+            print("Runtime analysis was called with an invalid filename")    
         
         
         
