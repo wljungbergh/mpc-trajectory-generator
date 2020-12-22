@@ -21,6 +21,7 @@ class PathGenerator:
         self.ppp = PathPreProcessor(self.config)
         self.mpc_generator = MpcModule(self.config)
         self.time_dict = dict()
+        self.solver_times = []
         
         if build:
             self.mpc_generator.build()
@@ -187,7 +188,7 @@ class PathGenerator:
       
         terminal = False
         t=0
-        total_solver_time = []
+        self.solver_times = []
 
         system_input = []  
         states = start.copy()
@@ -258,7 +259,6 @@ class PathGenerator:
                     '''ax.plot(states[0:-1:3], states[1:-1:3])
                     #plt.show()'''
                 
-                total_solver_time.append(solver_time)
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.1,rtol=0):# and abs(states[-1]-end[-1])<0.5:
                     terminal = True
@@ -286,13 +286,14 @@ class PathGenerator:
         mpc_time = int(1000*(time.time()-t_temp))
         
         #print("Total solution time: {} ms".format(total_time))
-        #print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
+        #print("Total MPC solver time: {} ms".format(sum(self.solver_times)))
         
         self.time_dict["mpc_time"] = mpc_time
-        self.time_dict["solver_time"] = sum(total_solver_time)
+        self.time_dict["solver_time"] = sum(self.solver_times)
+        self.time_dict["mean_solver_time"] = np.mean(self.solver_times)
         self.time_dict["total_time"] = total_time
         self.runtime_analysis()
-        
+        self.plot_solver_performance()
         # Plot solution
         # ------------------------------------
         nx = self.config.nx
@@ -302,7 +303,7 @@ class PathGenerator:
         uomega = system_input[1:len(system_input):2]
         
         
-        return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj
+        return xx,xy,uv,uomega,self.solver_times    # uncomment if we want to return the traj
     
     
     
@@ -334,6 +335,7 @@ class PathGenerator:
         print("Generate rough reference path : {} ms".format(self.time_dict["rough_ref"]))
         print("MPC loop                      : {} ms".format(self.time_dict["mpc_time"]))
         print("MPC loop solver               : {} ms".format(int(self.time_dict["solver_time"])))
+        print("MPC average solve time        : {} ms".format(int(self.time_dict["mean_solver_time"])))
         print("MPC loop python overhead      : {} ms".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
         print("Total                         : {} ms".format(self.time_dict["total_time"]))
         
@@ -345,23 +347,51 @@ class PathGenerator:
 
         try:
             file = open(file_name,"a")
-            file.write('############################### \n')
+            file.write('############################################### \n')
             file.write('Runtime Analysis ({}) \n'.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
-            file.write('###############################\n')
+            file.write('###############################################\n')
             file.write("Launching optimizer           : {} ms\n".format(self.time_dict["opt_launch"]))
             file.write("Prepare visibility graph      : {} ms\n".format(self.time_dict["prepare"]))
             file.write("Generate rough reference path : {} ms\n".format(self.time_dict["rough_ref"]))
             file.write("MPC loop                      : {} ms\n".format(self.time_dict["mpc_time"]))
             file.write("MPC loop solver               : {} ms \n".format(int(self.time_dict["solver_time"])))
+            file.write("MPC average solve time        : {} ms \n".format(int(self.time_dict["mean_solver_time"])))
             file.write("MPC loop python overhead      : {} ms\n".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
             file.write("Total                         : {} ms\n".format(self.time_dict["total_time"]))          
-            file.write('############################### \n \n \n')
+            file.write('############################################### \n \n \n')
             file.close()    
         except OSError:
             print("Runtime analysis was called with an invalid filename")    
         
         
-        
+    def plot_solver_performance(self, plot_type ="scatter"):
+        """
+        Plots all solver times generated in the mpc loop
+
+        Parameters
+        ----------
+        plot_type : TYPE, string
+            DESCRIPTION. Name of desired plot the default is "scatter".
+
+        Returns
+        -------
+        None.
+
+        """
+        if plot_type =="scatter":
+            x_ax = [self.config.ts*i for i in range(len(self.solver_times)) ]
+            plt.scatter(x_ax,self.solver_times, label ='solve times')
+            plt.legend()
+            plt.ylabel('solve time [ms]')
+            plt.xlabel('sampled at time [s]')
+            plt.show()
+        elif plot_type =="plot":
+            x_ax = [self.config.ts*i for i in range(len(self.solver_times)) ]
+            plt.plot(x_ax,self.solver_times, label ='solve times')
+            plt.legend()
+            plt.ylabel('solve time [ms]')
+            plt.xlabel('sampled at time [s]')
+            plt.show()
         
         
         
