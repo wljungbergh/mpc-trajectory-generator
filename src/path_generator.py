@@ -20,6 +20,9 @@ class PathGenerator:
         self.verbose = verbose
         self.ppp = PathPreProcessor(self.config)
         self.mpc_generator = MpcModule(self.config)
+        self.time_dict = dict()
+        self.solver_times = []
+        
         if build:
             self.mpc_generator.build()
 
@@ -155,29 +158,38 @@ class PathGenerator:
         None.
 
         """
+        t_temp = time.time() # Used to check run time for specific functions
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
         mng.ping()
+        self.time_dict["opt_launch"] = int(1000*(time.time()-t_temp))
         
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         
         tt = time.time()
         if self.verbose:
             print("[MPC] Building visibility graph")
-        self.ppp.prepare(graph_map)
+        t_temp = time.time()
+        self.ppp.prepare(graph_map)  
+        self.time_dict["prepare"] =int(1000*(time.time()-t_temp))
         if self.verbose:
             print("[MPC] Findig A* solution")
+        t_temp = time.time()
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
+        self.time_dict["initial_guess"] = int(1000*(time.time()-t_temp))
         if self.verbose:
             print("[MPC] Getting rough reference")
+        t_temp = time.time()
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
+        self.time_dict["rough_ref"] = int(1000*(time.time()-t_temp))
+        t_temp = time.time()
         #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
         if self.verbose:
             print("[MPC] Rough reference was succedfully generated")
       
         terminal = False
         t=0
-        total_solver_time = []
+        self.solver_times = []
 
         system_input = []  
         states = start.copy()
@@ -189,6 +201,7 @@ class PathGenerator:
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
         num_steps_vel_red = 10
+        t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:  
 
@@ -249,7 +262,6 @@ class PathGenerator:
                 if exit_status in self.config.bad_exit_codes and self.verbose:
                     print(f"[MPC] Bad converge status: {exit_status}")
                 
-                total_solver_time.append(solver_time)
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0): # and abs(states[-1]-end[-1])<0.5:
                     terminal = True
@@ -273,12 +285,17 @@ class PathGenerator:
         mng.kill()
         
         total_time = int(1000*(time.time()-tt))
+        mpc_time = int(1000*(time.time()-t_temp))
         
-        print("Total solution time: {} ms".format(total_time))
-    
-        print("Total MPC solver time: {} ms".format(sum(total_solver_time)))
-
-
+        #print("Total solution time: {} ms".format(total_time))
+        #print("Total MPC solver time: {} ms".format(sum(self.solver_times)))
+        
+        self.time_dict["mpc_time"] = mpc_time
+        self.time_dict["solver_time"] = sum(self.solver_times)
+        self.time_dict["mean_solver_time"] = np.mean(self.solver_times)
+        self.time_dict["total_time"] = total_time
+        self.runtime_analysis()
+        self.plot_solver_performance()
         # Plot solution
         # ------------------------------------
         nx = self.config.nx
@@ -287,6 +304,98 @@ class PathGenerator:
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
         
-
         
-        return xx,xy,uv,uomega,total_solver_time    # uncomment if we want to return the traj
+        return xx,xy,uv,uomega,self.solver_times    # uncomment if we want to return the traj
+    
+    
+    
+    def runtime_analysis(self,file_name =''):
+        """
+        Function that prints out a runtime analysis of the runtime 
+        functions. If the function is called with a string argument containing
+        a valid filename it will log the information to a file.
+        Parameters
+        ----------
+        file_name : TYPE, string
+            DESCRIPTION. Default '' incase no file logging is desired.
+            
+        Returns
+        -------
+        None.
+
+        """
+        
+        
+        if not len(self.time_dict):
+            print('There are no time entries run program before runtime analysis...')
+            return
+        print(70*'#')
+        print(' Runtime Analysis ({}) '.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
+        print(70*'#')
+        print("Launching optimizer           : {} ms".format(self.time_dict["opt_launch"]))
+        print("Prepare visibility graph      : {} ms".format(self.time_dict["prepare"]))
+        print("Generate rough reference path : {} ms".format(self.time_dict["rough_ref"]))
+        print("MPC loop                      : {} ms".format(self.time_dict["mpc_time"]))
+        print("MPC loop solver               : {} ms".format(int(self.time_dict["solver_time"])))
+        print("MPC average solve time        : {} ms".format(int(self.time_dict["mean_solver_time"])))
+        print("MPC loop python overhead      : {} ms".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
+        print("Total                         : {} ms".format(self.time_dict["total_time"]))
+        
+        print(70*'#')
+        
+        if file_name=='':
+            # exits function if no file name is provided
+            return
+
+        try:
+            file = open(file_name,"a")
+            file.write('############################################### \n')
+            file.write('Runtime Analysis ({}) \n'.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
+            file.write('###############################################\n')
+            file.write("Launching optimizer           : {} ms\n".format(self.time_dict["opt_launch"]))
+            file.write("Prepare visibility graph      : {} ms\n".format(self.time_dict["prepare"]))
+            file.write("Generate rough reference path : {} ms\n".format(self.time_dict["rough_ref"]))
+            file.write("MPC loop                      : {} ms\n".format(self.time_dict["mpc_time"]))
+            file.write("MPC loop solver               : {} ms \n".format(int(self.time_dict["solver_time"])))
+            file.write("MPC average solve time        : {} ms \n".format(int(self.time_dict["mean_solver_time"])))
+            file.write("MPC loop python overhead      : {} ms\n".format(int(self.time_dict["mpc_time"]-self.time_dict["solver_time"])))
+            file.write("Total                         : {} ms\n".format(self.time_dict["total_time"]))          
+            file.write('############################################### \n \n \n')
+            file.close()    
+        except OSError:
+            print("Runtime analysis was called with an invalid filename")    
+        
+        
+    def plot_solver_performance(self, plot_type ="scatter"):
+        """
+        Plots all solver times generated in the mpc loop
+
+        Parameters
+        ----------
+        plot_type : TYPE, string
+            DESCRIPTION. Name of desired plot the default is "scatter".
+
+        Returns
+        -------
+        None.
+
+        """
+        if plot_type =="scatter":
+            x_ax = [self.config.ts*i for i in range(len(self.solver_times)) ]
+            plt.scatter(x_ax,self.solver_times, label ='solve times')
+            plt.legend()
+            plt.ylabel('solve time [ms]')
+            plt.xlabel('sampled at time [s]')
+            plt.show()
+        elif plot_type =="plot":
+            x_ax = [self.config.ts*i for i in range(len(self.solver_times)) ]
+            plt.plot(x_ax,self.solver_times, label ='solve times')
+            plt.legend()
+            plt.ylabel('solve time [ms]')
+            plt.xlabel('sampled at time [s]')
+            plt.show()
+        
+        
+        
+        
+        
