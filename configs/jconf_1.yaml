@@ -23,14 +23,15 @@ lin_acc_penalty: 10.0    # Cost for linear acceleration
 ang_vel_penalty: 0      # Cost angular velocity control action
 ang_acc_penalty: 5.0    # Cost angular acceleration
 cte_penalty: 200        # Cost for cross-track-error from each line segment
-q: 10.0                 # Cost for each velocity relative the reference velocity
+q: 0.0                 # Cost for position deviation (each time step vs reference point)
+qv: 10.0                # Cost for speed deviation each time step
 qtheta: 0.0             # Cost for each heading relative to the final refernce position
 qN: 0.0                # Terminal cost; error relative to final reference position         
 qthetaN: 0.0            # Terminal cost; error relative to final reference heading 
 
 # Helper variables (Generally does not have to be changed)
 nx: 3     # Number of states for the robot (x,y,theta)
-nz: 19    # Number of optimization parameters
+nz: 20    # Number of optimization parameters
 nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles

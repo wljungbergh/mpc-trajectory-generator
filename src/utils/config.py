@@ -22,6 +22,7 @@ required_config_params = {
     'ang_acc_penalty': 'Cost angular acceleration',
     'cte_penalty': 'Cost for cross-track-error from each line segment',
     'q': 'Cost for each position relative the final reference position',
+    'qv': 'Cost for speed deviation at each time step',
     'qtheta': 'Cost for each heading relative to the final refernce position',
     'qN': 'Terminal cost; error relative to final reference position',
     'qthetaN': 'Terminal cost; error relative to final reference heading',

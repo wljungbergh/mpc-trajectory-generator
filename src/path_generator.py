@@ -159,7 +159,7 @@ class PathGenerator:
         mng.start()
         mng.ping()
         
-        parameter_list = [self.config.q, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
+        parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         
         tt = time.time()
         if self.verbose:
@@ -246,17 +246,13 @@ class PathGenerator:
                     mng.kill()
                     return
 
-                if exit_status in self.config.bad_exit_codes:
-                    if self.verbose:
-                        print(f"[MPC] Bad converge status: {exit_status}")
-                    '''ax.plot(states[0:-1:3], states[1:-1:3])
-                    #plt.show()'''
+                if exit_status in self.config.bad_exit_codes and self.verbose:
+                    print(f"[MPC] Bad converge status: {exit_status}")
                 
                 total_solver_time.append(solver_time)
 
-                if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0):# and abs(states[-1]-end[-1])<0.5:
+                if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0): # and abs(states[-1]-end[-1])<0.5:
                     terminal = True
-                    
                     print("[MPC] MPC solution found.")
 
                 t += self.config.num_steps_taken

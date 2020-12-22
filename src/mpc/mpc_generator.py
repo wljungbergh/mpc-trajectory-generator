@@ -185,7 +185,7 @@ class MpcModule:
                             # params,         vel_ref each step, number obstacles x num params per obs, num dynamic obstacles X num param/obs X time steps,    refernce path for each time step
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         (xref , yref, thetaref, velref, omegaref) = (z0[5], z0[6], z0[7], z0[8], z0[9])
-        (q, qtheta, rv, rw, qN, qthetaN, qCTE, acc_penalty, omega_acc_penalty) = (z0[10], z0[11], z0[12], z0[13], z0[14], z0[15], z0[16], z0[17], z0[18])
+        (q, qv, qtheta, rv, rw, qN, qthetaN, qCTE, acc_penalty, omega_acc_penalty) = (z0[10], z0[11], z0[12], z0[13], z0[14], z0[15], z0[16], z0[17], z0[18], z0[19])
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
@@ -195,12 +195,12 @@ class MpcModule:
             
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
             cost += rv * u_t[0]**2 + rw * u_t[1] ** 2
-            cost += q*(u_t[0]-z0[self.config.nz+t])**2
+            cost += qv*(u_t[0]-z0[self.config.nz+t])**2
             x += self.config.ts * (u_t[0] * cs.cos(theta))
             y += self.config.ts * (u_t[0] * cs.sin(theta))
             theta += self.config.ts * u_t[1]
 
-            #cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
+            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
             
             xs_static = z0[self.config.nz+self.config.N_hor:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
             ys_static = z0[self.config.nz+self.config.N_hor+1:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
