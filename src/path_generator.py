@@ -253,6 +253,7 @@ class PathGenerator:
                 parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
+                    self.solver_times.append(solver_time)
                 except RuntimeError as err:
                     if self.verbose:
                         print(err)
