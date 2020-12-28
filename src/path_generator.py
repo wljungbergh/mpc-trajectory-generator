@@ -212,23 +212,7 @@ class PathGenerator:
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
-        # Requested brake acceleration
-        brake_acc = -base_speed/(self.config.ts*self.config.vel_red_steps)
-        # Constrained brake acceleration
-        brake_acc = max(self.config.lin_acc_min,brake_acc)
-        # Time to reduce speed to 0
-        brake_time = -base_speed/brake_acc
-        # Distance travelled during braking
-        brake_dist = base_speed*brake_time + 0.5*brake_acc*brake_time**2
-        brake_time_steps = math.ceil(brake_time/self.config.ts)
-        # Velocities at each time step for proper braking
-        brake_velocities = [base_speed-base_speed/(brake_time_steps-1)*i for i in range(brake_time_steps)]
-        # Predicted distance to goal at each time step
-        brake_distances = [0.0] * len(brake_velocities)
-        brake_distances[0] = brake_dist
-        for i, vel in enumerate(brake_velocities):
-            if i < len(brake_distances)-1:
-                brake_distances[i+1] = brake_distances[i] - vel*self.config.ts
+        brake_velocities, brake_distances = self.get_brake_vel_ref()
 
         t_temp = time.time()
         try:
@@ -264,7 +248,7 @@ class PathGenerator:
                     tmpy = y_ref[idx:idx+self.config.N_hor]
                     tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
-                if (idx+self.config.N_hor) >= len(x_ref)-brake_dist/base_speed: # if any future step will be within braking "zone"
+                if (idx+self.config.N_hor) >= len(x_ref)-brake_distances[0]/base_speed: # if any future step will be within braking "zone"
                     num_base_speed = min(len(x_ref)-idx-1,self.config.N_hor)
                     vel_ref = [base_speed] * num_base_speed 
                     if num_base_speed == 0:
@@ -348,6 +332,45 @@ class PathGenerator:
         return xx,xy,uv,uomega,self.solver_times
     
     
+    
+    def get_brake_vel_ref(self):
+        """
+        Calculates reference velocities during braking, i.e.
+        when close to target state. 
+        
+        Parameters
+        ----------
+        brake_velocities : TYPE, list
+            DESCRIPTION. List with reference velocities for braking.
+
+        brake_distances  : TYPE, list
+            DESCRIPTION. List with distance to goal at each ref velocity.
+        
+        Returns
+        -------
+        None.
+
+        """
+        base_speed = self.config.lin_vel_max*self.config.throttle_ratio
+        # Requested brake acceleration
+        brake_acc = -base_speed/(self.config.ts*self.config.vel_red_steps)
+        # Constrained brake acceleration
+        brake_acc = max(self.config.lin_acc_min,brake_acc)
+        # Time to reduce speed to 0
+        brake_time = -base_speed/brake_acc
+        # Distance travelled during braking
+        brake_dist = base_speed*brake_time + 0.5*brake_acc*brake_time**2
+        brake_time_steps = math.ceil(brake_time/self.config.ts)
+        # Velocities at each time step for proper braking
+        brake_velocities = [base_speed-base_speed/(brake_time_steps-1)*i for i in range(brake_time_steps)]
+        # Predicted distance to goal at each time step
+        brake_distances = [0.0] * len(brake_velocities)
+        brake_distances[0] = brake_dist
+        for i, vel in enumerate(brake_velocities):
+            if i < len(brake_distances)-1:
+                brake_distances[i+1] = brake_distances[i] - vel*self.config.ts
+        
+        return brake_velocities, brake_distances
     
     def runtime_analysis(self,file_name =''):
         """
