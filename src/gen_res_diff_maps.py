@@ -3,6 +3,7 @@ from visibility.graphs import Graphs
 import math
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import matplotlib.patches as mpatches
 from utils.config import Configurator
 from pathlib import Path
 import os
@@ -19,7 +20,7 @@ path_gen = PathGenerator(config, build=False)
 
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=7)
+g = graphs.get_graph(complexity=0)
 
 start = list(g.start)
 end = list(g.end)
@@ -49,7 +50,7 @@ fig2.set_figheight(10)
 fig2.set_figwidth(10)
 path_ax =  ax2
 path_gen.ppp.plot_all(path_ax)
-path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha=0.5, markersize = 3)
+#path_ax.plot(xx, xy, c='b', label='Path', marker = 'o', alpha=0.5, markersize = 3)
 path_ax.plot(start[0], start[1], marker='*', color='g', markersize = 15)
 path_ax.plot(end[0], end[1], marker='*', color='r', markersize = 15)
 
@@ -61,12 +62,13 @@ legend_elems = [    Line2D([0], [0], color='k', label='Original Boundary' ),
                     Line2D([0], [0], color='r', label='Original Obstacles' ),
                     Line2D([0], [0], color='y', label='Padded Obstacles' ),
                     Line2D([0], [0], linestyle='--', color='k', label='A-Star Path' ),
-                    Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5),
+                    #Line2D([0], [0], marker='o', color='b', label='Generated Path', alpha = 0.5),
                     Line2D([0], [0], color='g', marker='*', label='Start Position'),
                     Line2D([0], [0], color='r', marker='*', label='End Position'),
+                    mpatches.Patch(color='r', label='NMPC Obstacle'),
                     ]
 
-path_ax.legend(handles = legend_elems, fontsize=15)
+path_ax.legend(handles = legend_elems, fontsize=15, loc='lower right')
 path_ax.axis('equal')
 
 plt.show()
