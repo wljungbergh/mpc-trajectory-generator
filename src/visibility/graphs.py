@@ -97,8 +97,9 @@ class Graphs:
 
         # To be specified in clock-wise ordering
         obstacle_list = []
-
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,5), (15,5)))
+        start_pos = (1,5, math.radians(0))
+        end_pos = (15,5, math.radians(0))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
 
 
         ############### Sixth Graph ############################# 

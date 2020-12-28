@@ -22,6 +22,8 @@ class PathGenerator:
         self.mpc_generator = MpcModule(self.config)
         self.time_dict = dict()
         self.solver_times = []
+        self.overhead_times = []
+        
         
         if build:
             self.mpc_generator.build()
@@ -138,6 +140,14 @@ class PathGenerator:
 
         plt.show()
 
+    def plot_solver_hist(self, run_times, xlabel='Run time [ms]'):
+        fig, ax = plt.subplots()
+        #ax.hist(run_times, bins=100)
+        ax.boxplot(run_times)
+        ax.set_ylabel('Count')
+        ax.set_xlabel(xlabel)
+        ax.grid('on')
+
     def run(self, graph_map, start, end):
         """
         Parameters
@@ -217,7 +227,7 @@ class PathGenerator:
         t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:
-
+                t_overhead = time.time()
                 x_init = states[-self.config.nx:] # set current state as initial state for solver
 
                 if len(self.ppp.original_obstacle_list):
@@ -294,7 +304,10 @@ class PathGenerator:
                     print("[MPC] MPC solution found.")
 
                 t += self.config.num_steps_taken
+                loop_time = (time.time() - t_overhead)*1000.0
+                self.overhead_times.append(loop_time-solver_time)
                 
+
         except KeyboardInterrupt:
             if self.verbose:
                 print("[MPC] killing TCP connection to MCP solver...")
@@ -318,7 +331,7 @@ class PathGenerator:
         self.time_dict["mean_solver_time"] = np.mean(self.solver_times)
         self.time_dict["total_time"] = total_time
         self.runtime_analysis()
-        self.plot_solver_performance()
+        #self.plot_solver_performance()
 
         # Prepare state for plotting
         # ------------------------------------
@@ -329,7 +342,7 @@ class PathGenerator:
         uomega = system_input[1:len(system_input):2]
 
 
-        return xx,xy,uv,uomega,self.solver_times
+        return xx,xy,uv,uomega,self.solver_times, self.overhead_times
     
     
     
@@ -443,6 +456,7 @@ class PathGenerator:
         None.
 
         """
+        
         if plot_type =="scatter":
             x_ax = [self.config.ts*i for i in range(len(self.solver_times)) ]
             plt.scatter(x_ax,self.solver_times, label ='solve times')
@@ -456,4 +470,9 @@ class PathGenerator:
             plt.legend()
             plt.ylabel('solve time [ms]')
             plt.xlabel('sampled at time [s]')
+            plt.show()
+        elif plot_type=="hist":
+            plt.hist(self.solver_times, density=True, bins=60)
+            plt.ylabel('Probability')
+            plt.xlabel('Solver Time [ms]')
             plt.show()
