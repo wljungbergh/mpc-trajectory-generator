@@ -324,7 +324,7 @@ class MpcModule:
             mng.kill() # kill so rust code wont keep running if python crashes
             raise RuntimeError(f"MPC Solver error: {error_msg}")
         
-        system_input += u
+        system_input += u[:self.config.nu*take_steps]
 
         for i in range(take_steps):
             u_v = u[i*self.config.nu]
