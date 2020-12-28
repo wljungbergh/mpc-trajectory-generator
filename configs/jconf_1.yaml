@@ -16,7 +16,7 @@ ang_acc_max: 3      # Vehicle contraint on the maximal angular acceleration (con
 throttle_ratio: 1.0 # What % of the maximal velocity should we try to
 num_steps_taken: 1  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
 ts: 0.2             # Size of the time-step
-vel_red_steps: 20   # Number of timesteps for braking when close to target position
+vel_red_steps: 20   # Number of timesteps for braking when close to goal position
 
 # Weights
 lin_vel_penalty: 0      # Cost for linear velocity control action

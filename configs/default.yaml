@@ -11,12 +11,12 @@ lin_acc_min: -1     # Vehicle contraint on the maximal linear retardation
 lin_acc_max: 1      # Vehicle contraint on the maximal linear acceleration
 ang_vel_max: 0.5    # Vehicle contraint on the maximal angular velocity
 ang_acc_max: 200    # Vehicle contraint on the maximal angular acceleration (considered to be symmetric)
-Ndynobs: 2 # Maximal number of dynamic obstacles
 
 # Parameters specific to the solution algorithm
 throttle_ratio: 0.9 # What % of the maximal velocity should we try to
 num_steps_taken: 1  # How many steps should be taken from each mpc-solution. Range (1 - N_hor)
 ts: 0.2             # Size of the time-step
+vel_red_steps: 20   # Number of timesteps for braking when close to goal position
 
 # Weights
 lin_vel_penalty: 10     # Cost for linear velocity control action
@@ -25,16 +25,18 @@ ang_vel_penalty: 10     # Cost angular velocity control action
 ang_acc_penalty: 0.0    # Cost angular acceleration
 cte_penalty: 1          # Cost for cross-track-error from each line segment
 q: 0.0                  # Cost for each position relative the final reference position
+qv: 10.0                # Cost for speed deviation each time step
 qtheta: 0.0             # Cost for each heading relative to the final refernce position
 qN: 200                 # Terminal cost; error relative to final reference position         
 qthetaN: 0.1            # Terminal cost; error relative to final reference heading 
 
 # Helper variables (Generally does not have to be changed)
 nx: 3     # Number of states for the robot (x,y,theta)
-nz: 19    # Number of optimization parameters
+nz: 20    # Number of optimization parameters
 nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles
+Ndynobs: 3 # Maximal number of dynamic obstacles
 
 # Vehicle parameters
 vehicle_width:  0.5   # Vehicle width in meters
