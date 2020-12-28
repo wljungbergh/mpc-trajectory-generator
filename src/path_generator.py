@@ -212,6 +212,24 @@ class PathGenerator:
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
+        # Requested brake acceleration
+        brake_acc = -base_speed/(self.config.ts*self.config.vel_red_steps)
+        # Constrained brake acceleration
+        brake_acc = max(self.config.lin_acc_min,brake_acc)
+        # Time to reduce speed to 0
+        brake_time = -base_speed/brake_acc
+        # Distance travelled during braking
+        brake_dist = base_speed*brake_time + 0.5*brake_acc*brake_time**2
+        brake_time_steps = math.ceil(brake_time/self.config.ts)
+        # Velocities at each time step for proper braking
+        brake_velocities = [base_speed-base_speed/(brake_time_steps-1)*i for i in range(brake_time_steps)]
+        # Predicted distance to goal at each time step
+        brake_distances = [0.0] * len(brake_velocities)
+        brake_distances[0] = brake_dist
+        for i, vel in enumerate(brake_velocities):
+            if i < len(brake_distances)-1:
+                brake_distances[i+1] = brake_distances[i] - vel*self.config.ts
+
         t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:
@@ -228,7 +246,7 @@ class PathGenerator:
                     dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(itertools.chain(*dyn_obstacle))
                     
                 # reduce search space for closest reference point TODO: how to select "5"?
-                lb_idx = max(0,idx-5*self.config.num_steps_taken)
+                lb_idx = max(0,idx-1*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points[lb_idx:ub_idx])
                 idx += lb_idx # idx in orignal list
@@ -246,8 +264,19 @@ class PathGenerator:
                     tmpy = y_ref[idx:idx+self.config.N_hor]
                     tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
-                if (idx+self.config.N_hor) >= len(x_ref)-self.config.vel_red_steps:
-                    vel_ref = [max(0,min(base_speed,base_speed*(len(x_ref)-1-i)/(self.config.vel_red_steps))) for i in range(idx, idx+self.config.N_hor)]
+                if (idx+self.config.N_hor) >= len(x_ref)-brake_dist/base_speed: # if any future step will be within braking "zone"
+                    num_base_speed = min(len(x_ref)-idx-1,self.config.N_hor)
+                    vel_ref = [base_speed] * num_base_speed 
+                    if num_base_speed == 0:
+                        dist_to_goal = math.sqrt((states[-3]-end[0])**2+(states[-2]-end[1])**2)
+                        vel_ref = [vel for (vel,dist) in zip(brake_velocities,brake_distances) if dist <= dist_to_goal]
+                    else:
+                        num_brake_vel = min(len(brake_velocities), self.config.N_hor-num_base_speed)
+                        vel_ref += brake_velocities[:num_brake_vel]
+                    
+                    # Zero pad velocity references
+                    vel_ref += [0.0] * (self.config.N_hor-len(vel_ref))
+
                 else:
                     vel_ref = [base_speed] * self.config.N_hor
                  
