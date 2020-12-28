@@ -323,14 +323,12 @@ class MpcModule:
             error_msg = solver_error.message
             mng.kill() # kill so rust code wont keep running if python crashes
             raise RuntimeError(f"MPC Solver error: {error_msg}")
+        
+        system_input += u
 
         for i in range(take_steps):
             u_v = u[i*self.config.nu]
             u_omega = u[1+i*self.config.nu]
-            
-            system_input.append(u_v)
-            system_input.append(u_omega)
-            
             
             x = states[-3]
             y = states[-2]
@@ -339,7 +337,7 @@ class MpcModule:
             states.append(x + self.config.ts * (u_v * math.cos(theta)))
             states.append(y + self.config.ts * (u_v * math.sin(theta)))
             states.append(theta + self.config.ts*u_omega)
-
+        
         return exit_status, solver_time
 
     def get_values_test1(self):    

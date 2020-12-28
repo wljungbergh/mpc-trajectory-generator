@@ -16,6 +16,7 @@ required_config_params = {
     'throttle_ratio': 'What percent of the maximal velocity should we try to',
     'num_steps_taken': 'How many steps should be taken from each mpc-solution. Range (1 - N_hor)',
     'ts': 'Size of the time-step',
+    'vel_red_steps', :'Steps for velocity reduction',
     'lin_vel_penalty': 'Cost for linear velocity control action',
     'lin_acc_penalty': 'Cost for linear acceleration', 
     'ang_vel_penalty': 'Cost angular velocity control action',

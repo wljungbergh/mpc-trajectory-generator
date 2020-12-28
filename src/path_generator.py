@@ -163,55 +163,67 @@ class PathGenerator:
         mng.start()
         mng.ping()
         self.time_dict["opt_launch"] = int(1000*(time.time()-t_temp))
-        
+
+        # Initialize tuning parameters to be passed to solver
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
-        
+
         tt = time.time()
+
         if self.verbose:
             print("[MPC] Building visibility graph")
         t_temp = time.time()
-        self.ppp.prepare(graph_map)  
+        self.ppp.prepare(graph_map)
         self.time_dict["prepare"] =int(1000*(time.time()-t_temp))
+
         if self.verbose:
             print("[MPC] Findig A* solution")
         t_temp = time.time()
         path, _ = self.ppp.get_initial_guess((start[0],start[1]), (end[0],end[1]))
         self.time_dict["initial_guess"] = int(1000*(time.time()-t_temp))
+
         if self.verbose:
             print("[MPC] Getting rough reference")
         t_temp = time.time()
         x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref((start[0],start[1]), path[1:])
         self.time_dict["rough_ref"] = int(1000*(time.time()-t_temp))
+
         t_temp = time.time()
-        #x_ref, y_ref, theta_ref = self.mpc_generator.rough_ref2(start,end, path)
         if self.verbose:
             print("[MPC] Rough reference was succedfully generated")
-      
+
         terminal = False
-        t=0
+        t = 0
+        idx = 0
         self.solver_times = []
 
-        system_input = []  
+        # Initalize list with selected system inputs/velocities
+        system_input = []
+        # Initialiize states as starting state
         states = start.copy()
+
         ref_points = [(x,y) for x,y in zip(x_ref, y_ref)]
+
+        # Initialize lists
         refs = [0.0] * (self.config.N_hor * self.config.nx)
-        idx = 0
         constraints = [0.0] * self.config.Nobs*self.config.nobs
         dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
+
+        # Initialize helper variables
         params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
-        num_steps_vel_red = 10
+
         t_temp = time.time()
         try:
-            while (not terminal) and t < 500.0/self.config.ts:  
+            while (not terminal) and t < 500.0/self.config.ts:
 
-                x_init = states[-self.config.nx:] # picks out current state for new initial state to solver
+                x_init = states[-self.config.nx:] # set current state as initial state for solver
+
                 if len(self.ppp.original_obstacle_list):
-                # Create constraints from verticies 
+                    # Create constraints from verticies
                     constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
                     for i, origin in enumerate(constraint_origin):
                         constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-                
+
                 for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor)):
                     dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(itertools.chain(*dyn_obstacle))
                     
@@ -219,8 +231,8 @@ class PathGenerator:
                 lb_idx = max(0,idx-5*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
                 _, idx = self.ppp.get_closest_vert((x_init[0], x_init[1]), ref_points[lb_idx:ub_idx])
-                idx += lb_idx #idx in orignal list
-                if (idx+self.config.N_hor >= len(x_ref)): 
+                idx += lb_idx # idx in orignal list
+                if (idx+self.config.N_hor >= len(x_ref)):
                     x_finish = end
                     tmpx = x_ref[idx:] + [end[0]] * (self.config.N_hor - (len(x_ref)-idx))
                     tmpy = y_ref[idx:] + [end[1]] * (self.config.N_hor - (len(y_ref)-idx))
@@ -234,8 +246,8 @@ class PathGenerator:
                     tmpy = y_ref[idx:idx+self.config.N_hor]
                     tmpt = theta_ref[idx:idx+self.config.N_hor]
                 
-                if (idx+self.config.N_hor) >= len(x_ref)-num_steps_vel_red:
-                    vel_ref = [max(0,min(base_speed,base_speed*(len(x_ref)-1-i)/(num_steps_vel_red))) for i in range(idx, idx+self.config.N_hor)]
+                if (idx+self.config.N_hor) >= len(x_ref)-self.config.vel_red_steps:
+                    vel_ref = [max(0,min(base_speed,base_speed*(len(x_ref)-1-i)/(self.config.vel_red_steps))) for i in range(idx, idx+self.config.N_hor)]
                 else:
                     vel_ref = [base_speed] * self.config.N_hor
                  
@@ -250,19 +262,19 @@ class PathGenerator:
                 else:
                     last_u = [0.0] * self.config.nu
 
+                # Assemble list of parameters for solver
                 parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
+                
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                     self.solver_times.append(solver_time)
                 except RuntimeError as err:
                     if self.verbose:
                         print(err)
-                    mng.kill()
                     return
 
                 if exit_status in self.config.bad_exit_codes and self.verbose:
                     print(f"[MPC] Bad converge status: {exit_status}")
-                
 
                 if np.allclose(states[-3:-1],end[0:2],atol=0.05,rtol=0): # and abs(states[-1]-end[-1])<0.5:
                     terminal = True
@@ -280,33 +292,31 @@ class PathGenerator:
             uv = system_input[0:len(system_input):2]
             uomega = system_input[1:len(system_input):2]
             
-            return xx,xy,uv,uomega 
+            return xx,xy,uv,uomega
             
 
         mng.kill()
-        
+
         total_time = int(1000*(time.time()-tt))
         mpc_time = int(1000*(time.time()-t_temp))
-        
-        #print("Total solution time: {} ms".format(total_time))
-        #print("Total MPC solver time: {} ms".format(sum(self.solver_times)))
-        
+
         self.time_dict["mpc_time"] = mpc_time
         self.time_dict["solver_time"] = sum(self.solver_times)
         self.time_dict["mean_solver_time"] = np.mean(self.solver_times)
         self.time_dict["total_time"] = total_time
         self.runtime_analysis()
         self.plot_solver_performance()
-        # Plot solution
+
+        # Prepare state for plotting
         # ------------------------------------
         nx = self.config.nx
         xx = states[0:len(states):nx]
         xy = states[1:len(states):nx]
         uv = system_input[0:len(system_input):2]
         uomega = system_input[1:len(system_input):2]
-        
-        
-        return xx,xy,uv,uomega,self.solver_times    # uncomment if we want to return the traj
+
+
+        return xx,xy,uv,uomega,self.solver_times
     
     
     
@@ -395,8 +405,3 @@ class PathGenerator:
             plt.ylabel('solve time [ms]')
             plt.xlabel('sampled at time [s]')
             plt.show()
-        
-        
-        
-        
-        
