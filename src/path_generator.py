@@ -318,7 +318,7 @@ class PathGenerator:
             uv = system_input[0:len(system_input):2]
             uomega = system_input[1:len(system_input):2]
             
-            return xx,xy,uv,uomega
+            return xx,xy,uv,uomega,self.solver_times,self.overhead_times
             
 
         mng.kill()
