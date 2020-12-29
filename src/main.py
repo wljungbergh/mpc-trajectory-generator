@@ -19,7 +19,7 @@ path_gen = PathGenerator(config, build=False)
 
 start = list(g.start)
 end = list(g.end)
-xx,xy,uv,uomega,tot_solver_time = path_gen.run(g, start, end)
+xx,xy,uv,uomega,tot_solver_time,overhead_times = path_gen.run(g, start, end)
 
 path_gen.plot_results(xx,xy,uv,uomega, start, end, dynamic=False)
 plt.show()
