@@ -334,51 +334,14 @@ class MpcModule:
             y = states[-2]
             theta = states[-1]
 
-            states.append(x + self.config.ts * (u_v * math.cos(theta)))
-            states.append(y + self.config.ts * (u_v * math.sin(theta)))
-            states.append(theta + self.config.ts*u_omega)
+            states += [x + self.config.ts * (u_v * math.cos(theta)), 
+                       y + self.config.ts * (u_v * math.sin(theta)), 
+                       theta + self.config.ts*u_omega]
         
         return exit_status, solver_time
-
-    def get_values_test1(self):    
-        # Use TCP server
-        # ------------------------------------
-        x_init = [-2.0, -2.0, math.pi/4]
-        x_finish = [15, 15, math.pi/4]
-
-        # ToDo add node_list in the input argument instead
-        node_list = [(0,0),(3,3),(5,3),(8,1),(x_finish[0],x_finish[1])]
- 
-        radius = 0.1
-
-        self.obstacles = [[1, 1, radius],[0, -1, radius], [2, -1, radius],
-                            [2, 1, radius],[-0.5, -0.2, radius]]
-
-        circles = [0.0] * (self.config.Nobs*self.config.nobs)
-        for i, circ in enumerate(self.obstacles):
-            circles[i*self.config.nobs:(i+1)*self.config.nobs] = circ[0:self.config.nobs]
-            
-        return x_init, x_finish, node_list, circles, radius
-
 
 def safe_norm(x,y):
     dist = math.hypot(x,y)
     return 1e-16 if dist == 0 else dist
 
-
-if __name__ == '__main__':
-    do_build = False
-    do_run = True
-    
-    config = Config()
-    mpc_module = MpcModule(config)
-
-
-    if do_build:
-        mpc_module.build()
-
-    if do_run:
-        # Run with test case
-        x_init, x_finish, node_list, circles, radius = mpc_module.get_values_test1()
-        xx,xy,uv,uomega = mpc_module.run(x_init, x_finish, node_list, circles, radius)
         

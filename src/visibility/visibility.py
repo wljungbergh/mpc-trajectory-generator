@@ -139,6 +139,9 @@ class PathPreProcessor:
         return vertices
     
     def find_closest_vertices(self, current_pos, n_vertices = 10, N_STEPS_LOOK_BACK = 2):
+        if n_vertices >= len(self.vert):
+            return self.vert.copy()
+
         _, idx = self.get_closest_vert(current_pos, self.vert)
         lb = max(0, idx - N_STEPS_LOOK_BACK) # look two objects behind 
         ub = min(len(self.vert), n_vertices - N_STEPS_LOOK_BACK)
@@ -163,6 +166,10 @@ class PathPreProcessor:
 
 
     def get_dyn_obstacle(self, t, horizon):
+        # TODO: allow simulation to start from previously calculated positionss
+        if len(self.dyn_obs_list) == 0:
+            return []
+
         time = np.linspace(t, t+horizon*self.config.ts, horizon)
         obs_list = []
         for obs in self.dyn_obs_list:

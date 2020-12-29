@@ -233,12 +233,14 @@ class PathGenerator:
                 if len(self.ppp.original_obstacle_list):
                     # Create constraints from verticies
                     constraint_origin = self.ppp.find_closest_vertices((x_init[0], x_init[1]), self.config.Nobs, 0)
-                    for i, origin in enumerate(constraint_origin):
-                        constraints[i*self.config.nobs:(i+1)*self.config.nobs] = list(origin) + [self.config.vehicle_width/2 + self.config.vehicle_margin]
-
+                    # Add radius to obstacle information
+                    constraints = list(itertools.chain(*[(x,y,self.config.vehicle_width/2 + self.config.vehicle_margin) for x,y in constraint_origin]))
+                    # Zero-pad to correct length
+                    constraints += [0.0] * (self.config.Nobs*self.config.nobs - len(constraints))
+                    
                 for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor)):
                     dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(itertools.chain(*dyn_obstacle))
-                    
+                
                 # reduce search space for closest reference point TODO: how to select "5"?
                 lb_idx = max(0,idx-1*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5*self.config.num_steps_taken)
