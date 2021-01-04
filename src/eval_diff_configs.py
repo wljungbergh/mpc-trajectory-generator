@@ -12,14 +12,13 @@ graphs = Graphs()
 g = graphs.get_graph(complexity=1)
 file_path = Path(__file__)
 
-start = list(g.start) + [math.radians(45)]
-end = list(g.end) + [math.radians(260)]
+
 folder_name = os.path.join(str(file_path.parent.parent), 'plotted_results')
 
 if not os.path.exists(folder_name):
     os.makedirs(folder_name, 0o666, exist_ok=True)
 
-config_filenames = ['jconf_0.yaml','jconf_1.yaml','jconf_2.yaml','jconf_3.yaml','jconf_4.yaml','jconf_5.yaml']
+config_filenames = ['jconf_0.yaml','jconf_1.yaml','jconf_2.yaml','jconf_3.yaml','jconf_4.yaml']
 
 t = time.strftime("%Y%m%d_%H%M%S")
 def generate_plot(config_filename):
@@ -30,8 +29,10 @@ def generate_plot(config_filename):
     config = configurator.configurate()
 
     path_gen = PathGenerator(config, build=False)
-
-    xx,xy,uv,uomega = path_gen.run(g, start, end)
+    
+    start = list(g.start)
+    end = list(g.end)
+    xx,xy,uv,uomega,_,_ = path_gen.run(g, start, end)
 
 
     fig, ax = plt.subplots(2,1)
