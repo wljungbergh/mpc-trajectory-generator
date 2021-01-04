@@ -171,6 +171,7 @@ class PathGenerator:
         t_temp = time.time() # Used to check run time for specific functions
         mng = og.tcp.OptimizerTcpManager(self.config.build_directory + os.sep + self.config.optimizer_name)
         mng.start()
+        # Ensure RUST solver is up and runnings
         mng.ping()
         self.time_dict["opt_launch"] = int(1000*(time.time()-t_temp))
 

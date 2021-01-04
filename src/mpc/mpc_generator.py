@@ -194,13 +194,14 @@ class MpcModule:
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
             u_t = u[t*self.config.nu:(t+1)*self.config.nu]
-            cost += rv * u_t[0]**2 + rw * u_t[1] ** 2
-            cost += qv*(u_t[0]-z0[self.config.nz+t])**2
+            cost += rv * u_t[0]**2 + rw * u_t[1] ** 2 # Penalize control actions
+            cost += qv*(u_t[0]-z0[self.config.nz+t])**2 # Cost for diff between velocity and reference velocity
+            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
+            
             x += self.config.ts * (u_t[0] * cs.cos(theta))
             y += self.config.ts * (u_t[0] * cs.sin(theta))
             theta += self.config.ts * u_t[1]
-
-            cost += self.cost_fn((x,y,theta),(xref,yref,thetaref),q,qtheta)
+            
             
             xs_static = z0[self.config.nz+self.config.N_hor:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
             ys_static = z0[self.config.nz+self.config.N_hor+1:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
@@ -242,7 +243,7 @@ class MpcModule:
                 t_star = cs.fmin(cs.fmax(t_hat,0.0),1.0)
                 # vector pointing from us to closest point
                 temp_vec = s1 + t_star*s2s1 - p
-                # append distance
+                # append distance (is actually squared distance)
                 distances = cs.horzcat(distances,temp_vec[0]**2+temp_vec[1]**2)
 
             cost += cs.mmin(distances[1:])*qCTE
