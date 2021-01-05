@@ -157,7 +157,16 @@ class Graphs:
         end_pos = (17.8, 6.56, math.radians(265))
         self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
 
-        
+        ############### Eleventh Graph ############################# 
+        # To be specified in counter-clockwise ordering
+
+        boundary_coordinates = [(1.5, 1.0), (1.7, 58.6), (59.0, 58.4), (58.6, 1.3)]
+
+        # To be specified in clock-wise ordering
+        obstacle_list = [[(27.0, 6.0), (27.0, 33.0), (4.0, 33.0), (4.0, 6.0)], [(65.0, 6.0), (28.1, 6.0), (28.1, 33.0), (65.0, 33.0)], [(4.4, 34.1), (44.0, 34.1), (44.0, 39.3), (55.3, 39.6), (55.3, 42.8), (44.0, 42.3), (44.1, 49.1), (54.9, 49.2), (54.9, 53.0), (4.7, 53.0)], [(47.7, 36.2), (47.7, 34.6), (57.8, 34.5), (57.8, 36.3)]]
+        start_pos = (27.8, 2.7, math.radians(90))
+        end_pos = (50.3, 45.9, math.radians(0))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
 
         self.min_complexity = 0
         self.max_complexity = len(self.graphs) - 1
