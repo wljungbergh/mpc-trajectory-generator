@@ -17,5 +17,5 @@ dependencies:
   - pyvisgraph==0.2.1
   - opengen==0.6.4
   - casadi
-  - extremitypathfinder
+  - extremitypathfinder>=2.1.0
   - pyclipper
