@@ -18,7 +18,7 @@ config = configurator.configurate()
 
 runtime = []
 overhead= []
-for i in range(1,11):
+for i in range(1,12):
     print(f'STARTING NUMBER {i}')
     path_gen = PathGenerator(config, build=False)
     g = graphs.get_graph(complexity=i)
@@ -30,7 +30,5 @@ for i in range(1,11):
     runtime += solver_times
 
 loop = [x+y for x,y in zip(overhead,runtime)]
-path_gen.plot_solver_hist(overhead)
-path_gen.plot_solver_hist(runtime)
 path_gen.plot_solver_hist(loop)
 plt.show()

@@ -62,7 +62,7 @@ class Graphs:
             [[40.5, 18], [37, 26], 0.1, 0.5]
         ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1,math.radians(45)), (5,20,math.radians(270)), dyn_obs_list))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1,math.radians(45)), (5,20,math.radians(270)), []))
 
         ############### Forth Graph ############################# 
         # To be specified in counter-clockwise ordering

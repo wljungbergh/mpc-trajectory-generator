@@ -142,7 +142,7 @@ class PathGenerator:
 
     def plot_solver_hist(self, run_times, xlabel='Run time [ms]'):
         fig, ax = plt.subplots()
-        ax.hist(run_times, bins=100)
+        ax.hist(run_times, bins=50)
         ax.set_ylabel('Count')
         ax.set_xlabel(xlabel)
         ax.grid('on')
