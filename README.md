@@ -22,7 +22,7 @@ If the environment file is changed, simply update an existing environment by run
    conda env update -f env/environment.yml --prune
    ```
 
-## Algortihm 
+## Algorithm 
 The algorithm is explained in detail in the accompinying (unpublished) [paper](docs/paper.pdf). In summary, the algorithm models the environment as polygons and find the shortest path using A*, implemented in the [extremitypathfinder](https://github.com/MrMinimal64/extremitypathfinder) python package. This path is then followed by an NMPC controller to generate a smooth trajectory for a differential drive robot. 
 
 The algorithm can be run by running [main.py](src/main.py), make sure to set `build=True` if the NPMC solver hasn't been built before. By changing `g = graphs.get_graph(complexity=11)` to a different complexity, different predefined scenarios can be run. Different configuration exist in [configs](configs) and which to use is specified by changing the filename `config_fn = 'default.yaml'` to something different. **Note**, some of the config parameters require a rebuild of the NMPC solver to take effect. 
