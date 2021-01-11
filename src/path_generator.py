@@ -219,7 +219,7 @@ class PathGenerator:
         dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
 
         # Initialize helper variables
-        params_per_dyn_obs = self.config.N_hor*self.config.Ndynobs*self.config.nobs
+        params_per_dyn_obs = self.config.N_hor*self.config.nobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
         brake_velocities, brake_distances = self.get_brake_vel_ref()
