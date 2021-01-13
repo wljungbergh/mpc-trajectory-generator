@@ -176,7 +176,9 @@ class PathGenerator:
 
         # Initialize tuning parameters to be passed to solver
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
-
+        p_init_c = [0]*len(parameter_list)
+        p_init_c[1], p_init_c[-3] =  10,10
+        
         tt = time.time()
 
         if self.verbose:
@@ -223,7 +225,7 @@ class PathGenerator:
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
         brake_velocities, brake_distances = self.get_brake_vel_ref()
-
+        establish_heading = False
         t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:
@@ -281,7 +283,13 @@ class PathGenerator:
                 refs[0::self.config.nx] = tmpx
                 refs[1::self.config.nx] = tmpy
                 refs[2::self.config.nx] = tmpt
-
+                
+                if establish_heading and abs(tmpt-states[-1]) < (math.pi/6) :
+                    # when initial heading has been established it will
+                    # 
+                    establish_heading = False
+                    
+                     
                 if len(system_input):
                     last_u = system_input[-self.config.nu:]
                 else:
@@ -291,7 +299,10 @@ class PathGenerator:
                 parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
                 
                 try:
-                    exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
+                    if(establish_heading): # If initial heading is bad an other list of params will be used utill a good heading is established
+                        exit_status, solver_time = self.mpc_generator.run(p_init_c, mng, self.config.num_steps_taken, system_input, states)
+                    else:
+                        exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
                     self.solver_times.append(solver_time)
                 except RuntimeError as err:
                     if self.verbose:
