@@ -178,7 +178,7 @@ class PathGenerator:
         # Initialize tuning parameters to be passed to solver
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         # generate costs to establish initial heading
-        p_init_c = [0.5*temp for temp in parameter_list]
+        p_init_c = [0.0*temp for temp in parameter_list]
         p_init_c[2] = np.max(parameter_list) # makes a list with large angular cost
 
         
@@ -228,7 +228,7 @@ class PathGenerator:
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
         brake_velocities, brake_distances = self.get_brake_vel_ref()
-        establish_heading = True
+        establish_heading = False
         t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:
