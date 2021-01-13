@@ -177,7 +177,7 @@ class PathGenerator:
         # Initialize tuning parameters to be passed to solver
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
         p_init_c = [0]*len(parameter_list)
-        p_init_c[1], p_init_c[-3] =  10,10
+        p_init_c[1],p_init_c[5], p_init_c[-3] =  10,10,10
         
         tt = time.time()
 
