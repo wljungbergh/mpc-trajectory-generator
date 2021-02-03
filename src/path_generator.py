@@ -25,6 +25,7 @@ class PathGenerator:
         self.overhead_times = []
         
         
+        
         if build:
             self.mpc_generator.build()
 
@@ -176,7 +177,11 @@ class PathGenerator:
 
         # Initialize tuning parameters to be passed to solver
         parameter_list = [self.config.q, self.config.qv, self.config.qtheta, self.config.lin_vel_penalty, self.config.ang_vel_penalty, self.config.qN, self.config.qthetaN, self.config.cte_penalty, self.config.lin_acc_penalty, self.config.ang_acc_penalty]
+        # generate costs to establish initial heading
+        p_init_c = [0.0*temp for temp in parameter_list]
+        p_init_c[2] = np.max(parameter_list) # makes a list with large angular cost
 
+        
         tt = time.time()
 
         if self.verbose:
@@ -223,7 +228,7 @@ class PathGenerator:
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
         brake_velocities, brake_distances = self.get_brake_vel_ref()
-
+        establish_heading = False
         t_temp = time.time()
         try:
             while (not terminal) and t < 500.0/self.config.ts:
@@ -281,14 +286,22 @@ class PathGenerator:
                 refs[0::self.config.nx] = tmpx
                 refs[1::self.config.nx] = tmpy
                 refs[2::self.config.nx] = tmpt
+                if establish_heading and abs(theta_ref[idx]-states[-1]) < (math.pi/6) :
+                    # when initial heading has been established it will
 
+                    establish_heading = False
+                    
+                     
                 if len(system_input):
                     last_u = system_input[-self.config.nu:]
                 else:
                     last_u = [0.0] * self.config.nu
 
                 # Assemble list of parameters for solver
-                parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
+                if(not establish_heading):
+                    parameters = x_init+last_u+x_finish+last_u+parameter_list+vel_ref+constraints+dyn_constraints+refs
+                else:
+                    parameters = x_init+last_u+x_finish+last_u+p_init_c+vel_ref+constraints+dyn_constraints+refs
                 
                 try:
                     exit_status, solver_time = self.mpc_generator.run(parameters, mng, self.config.num_steps_taken, system_input, states)
@@ -411,6 +424,7 @@ class PathGenerator:
         print(' Runtime Analysis ({}) '.format(time.strftime("%a, %d %b %Y %H:%M:%S +0100", time.localtime())))
         print(70*'#')
         print("Launching optimizer           : {} ms".format(self.time_dict["opt_launch"]))
+        print(70*'-')
         print("Prepare visibility graph      : {} ms".format(self.time_dict["prepare"]))
         print("Generate rough reference path : {} ms".format(self.time_dict["rough_ref"]))
         print("MPC loop                      : {} ms".format(self.time_dict["mpc_time"]))
