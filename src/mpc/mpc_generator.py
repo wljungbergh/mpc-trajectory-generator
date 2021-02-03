@@ -222,6 +222,12 @@ class MpcModule:
             ydiff = y-ys
 
             obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
+            # Ellipse parameterized according to https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
+            # xs and ys are ellipse center points, xdiff is as before
+            # x_radius and y_radius are radii in "x" and "y" directions
+            # As are angles of ellipses (positive from x axis)
+            # distance_inside_ellipse = 1 - (xdiff*cs.cos(As)+ydiff*cs.sin(As))**2 / (x_radius**2) - (xdiff*cs.sin(As)-ydiff*cs.cos(As))**2 / (y_radius)**2
+            # obstacle_constraints += cs.fmax(0, distance_inside_ellipse)
 
             # our current point
             p = cs.vertcat(x,y)
