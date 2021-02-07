@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 
 graphs = Graphs()
-g = graphs.get_graph(complexity=11)
+g = graphs.get_graph(complexity=2)
 file_path = Path(__file__)
 
 config_fn = 'default.yaml'
@@ -22,5 +22,5 @@ start[-1] = math.pi
 end = list(g.end)
 xx,xy,uv,uomega,tot_solver_time,overhead_times = path_gen.run(g, start, end)
 
-path_gen.plot_results(xx,xy,uv,uomega, start, end, dynamic=False)
+path_gen.plot_results(xx,xy,uv,uomega, start, end, dynamic=True)
 plt.show()

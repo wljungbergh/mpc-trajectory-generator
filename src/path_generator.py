@@ -123,10 +123,12 @@ class PathGenerator:
             veh = plt.Circle((xx[i], xy[i]), self.config.vehicle_width/2, color = 'b', alpha = 0.7, label='Robot')
             path_ax.add_artist(veh)
             for j, obstacle in enumerate(self.ppp.dyn_obs_list):
-                p1,p2,freq,obstacle_radius = obstacle
+                p1, p2, freq, x_radius, y_radius, angle = obstacle
                 pos = self.ppp.generate_obstacle(p1,p2, freq, i * self.config.ts)
-                obs[j] = plt.Circle(pos, obstacle_radius, color = 'r', alpha = 1, label='Obstacle')
-                obs_padded[j] = plt.Circle(pos, obstacle_radius + self.config.vehicle_width/2 + self.config.vehicle_margin, color = 'y', alpha = 0.7, label='Padded obstacle')
+                obs[j] = mpatches.Ellipse(pos, x_radius*2, y_radius*2, angle/(2*math.pi)*360, color = 'r', alpha = 1, label='Obstacle')
+                x_rad_pad = x_radius + self.config.vehicle_width/2 + self.config.vehicle_margin
+                y_rad_pad = y_radius + self.config.vehicle_width/2 + self.config.vehicle_margin
+                obs_padded[j] = mpatches.Ellipse(pos, x_rad_pad*2, y_rad_pad*2, angle/(2*math.pi)*360, color = 'y', alpha = 0.7, label='Padded obstacle')
                 path_ax.add_artist(obs_padded[j])
                 path_ax.add_artist(obs[j])
             
@@ -221,10 +223,13 @@ class PathGenerator:
         # Initialize lists
         refs = [0.0] * (self.config.N_hor * self.config.nx)
         constraints = [0.0] * self.config.Nobs*self.config.nobs
-        dyn_constraints = [0.0] * self.config.Ndynobs*self.config.nobs*self.config.N_hor
+        dyn_constraints = [0.0] * self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
+        # Avoid dividing by zero in MPC solver by init x radius and y radius to 1
+        dyn_constraints[2::self.config.ndynobs] = [1.0] * self.config.Ndynobs*self.config.N_hor
+        dyn_constraints[3::self.config.ndynobs] = [1.0] * self.config.Ndynobs*self.config.N_hor
 
         # Initialize helper variables
-        params_per_dyn_obs = self.config.N_hor*self.config.nobs
+        params_per_dyn_obs = self.config.N_hor*self.config.ndynobs
         base_speed = self.config.lin_vel_max*self.config.throttle_ratio
 
         brake_velocities, brake_distances = self.get_brake_vel_ref()

@@ -181,7 +181,7 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.N_hor + self.config.Nobs*self.config.nobs + self.config.Ndynobs*self.config.nobs*self.config.N_hor + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.N_hor + self.config.Nobs*self.config.nobs + self.config.Ndynobs*self.config.ndynobs*self.config.N_hor + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
                             # params,         vel_ref each step, number obstacles x num params per obs, num dynamic obstacles X num param/obs X time steps,    refernce path for each time step
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         (xref , yref, thetaref, velref, omegaref) = (z0[5], z0[6], z0[7], z0[8], z0[9])
@@ -189,7 +189,7 @@ class MpcModule:
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
-        base = self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs+self.config.Ndynobs*self.config.nobs*self.config.N_hor
+        base = self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs+self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
@@ -209,25 +209,27 @@ class MpcModule:
 
             # ordering is x,y,r for obstacle 0 for N_hor timesteps, then x,y,r for obstalce 1 for N_hor timesteps etc.
             end_of_static_obs_idx = self.config.nz + self.config.N_hor +  self.config.Nobs*self.config.nobs
-            end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.nobs*self.config.N_hor
-            xs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
-            ys_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+1:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
-            rs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+2:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
+            end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
+            xs_dynamic = z0[end_of_static_obs_idx+t*self.config.ndynobs:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            ys_dynamic = z0[end_of_static_obs_idx+t*self.config.ndynobs+1:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            x_radius = z0[end_of_static_obs_idx+t*self.config.ndynobs+2:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            y_radius = z0[end_of_static_obs_idx+t*self.config.ndynobs+3:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            As = z0[end_of_static_obs_idx+t*self.config.ndynobs+4:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
 
-            xs = cs.vertcat(xs_static,xs_dynamic)
-            ys = cs.vertcat(ys_static,ys_dynamic)
-            rs = cs.vertcat(rs_static,rs_dynamic)
+            xdiff_static = x-xs_static
+            ydiff_static = y-ys_static
 
-            xdiff = x-xs
-            ydiff = y-ys
+            xdiff_dynamic = x-xs_dynamic
+            ydiff_dynamic = y-ys_dynamic
 
-            obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
+            distance_inside_circle = rs_static**2-xdiff_static**2-ydiff_static**2
+
             # Ellipse parameterized according to https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
             # xs and ys are ellipse center points, xdiff is as before
             # x_radius and y_radius are radii in "x" and "y" directions
             # As are angles of ellipses (positive from x axis)
-            # distance_inside_ellipse = 1 - (xdiff*cs.cos(As)+ydiff*cs.sin(As))**2 / (x_radius**2) - (xdiff*cs.sin(As)-ydiff*cs.cos(As))**2 / (y_radius)**2
-            # obstacle_constraints += cs.fmax(0, distance_inside_ellipse)
+            distance_inside_ellipse = 1 - (xdiff_dynamic*cs.cos(As)+ydiff_dynamic*cs.sin(As))**2 / (x_radius**2) - (xdiff_dynamic*cs.sin(As)-ydiff_dynamic*cs.cos(As))**2 / (y_radius)**2
+            obstacle_constraints += cs.fmax(0, cs.vertcat(distance_inside_circle,distance_inside_ellipse))
 
             # our current point
             p = cs.vertcat(x,y)

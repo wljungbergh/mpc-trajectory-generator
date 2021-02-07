@@ -37,6 +37,7 @@ nu: 2     # Number of control inputs
 nobs: 3   # Number of variables per obstacles
 Nobs: 10  # Maximal number of obstacles
 Ndynobs: 3 # Maximal number of dynamic obstacles
+ndynobs: 5 # Number of variables per dynamic obstacle
 
 # Vehicle parameters
 vehicle_width:  0.5   # Vehicle width in meters

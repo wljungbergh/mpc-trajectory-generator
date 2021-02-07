@@ -56,13 +56,14 @@ class Graphs:
             [(32.0, 6.0), (32.0, 10.5), (42.0, 12.5), (42, 8.0)]
          ]
 
+        # Starting point, ending point, x radius, y radius, angle
         dyn_obs_list = [
-            [[6.5, 5], [4.5, 7], 0.1, 0.5], 
-            [[17.5, 43], [22, 37.5], 0.1, 0.5], 
-            [[40.5, 18], [37, 26], 0.1, 0.5]
+            [[17.5, 43], [22, 37.5], 0.1, 0.2, 0.5, 0.1], 
+            [[40.5, 18], [37, 26], 0.1, 0.5, 0.2, 0.5],
+            [[6.5, 5], [4.5, 7], 0.1, 0.5, 1, 2]
         ]
 
-        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1,math.radians(45)), (5,20,math.radians(270)), []))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, (1,1,math.radians(225)), (5,20,math.radians(270)), dyn_obs_list=dyn_obs_list))
 
         ############### Forth Graph ############################# 
         # To be specified in counter-clockwise ordering
