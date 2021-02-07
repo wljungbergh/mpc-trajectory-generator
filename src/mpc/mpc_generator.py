@@ -207,7 +207,7 @@ class MpcModule:
             ys_static = z0[self.config.nz+self.config.N_hor+1:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
             rs_static = z0[self.config.nz+self.config.N_hor+2:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
 
-            # ordering is x,y,r for obstacle 0 for N_hor timesteps, then x,y,r for obstalce 1 for N_hor timesteps etc.
+            # ordering is x,y,x_r, y_r, angle for obstacle 0 for N_hor timesteps, then x,y,x_r, y_r, angle for obstalce 1 for N_hor timesteps etc.
             end_of_static_obs_idx = self.config.nz + self.config.N_hor +  self.config.Nobs*self.config.nobs
             end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
             xs_dynamic = z0[end_of_static_obs_idx+t*self.config.ndynobs:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
