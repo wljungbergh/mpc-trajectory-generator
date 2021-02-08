@@ -169,6 +169,25 @@ class Graphs:
         end_pos = (50.3, 45.9, math.radians(0))
         self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos))
 
+
+        boundary_coordinates = [(11.9, 3.6), (11.9, 50.6), (47.3, 50.6), (47.3, 3.6)]
+        
+        obstacle_list = [[(11.3, 11.8), (22.2, 11.8), (22.2, 15.9), (11.3, 15.9)],
+            [(11.4, 20.4), (22.2, 20.4), (22.2, 25.0), (11.4, 25.0)],
+            [(28.0, 25.5), (28.0, 20.5), (32.4, 20.5), (32.4, 15.7), (28.0, 15.7), (28.0, 3.7), (37.8, 3.7), (37.8, 25.5)], 
+            [(15.9, 29.5), (37.7, 29.5), (37.7, 44.5), (25.3, 44.5), (25.3, 40.7), (35.0, 40.7), (35.0, 31.7), (15.9, 31.7)],
+            [(29.8, 28.7), (29.8, 25.8), (34.5, 25.8), (34.5, 28.7)]]
+
+        # Starting point, ending point, freq, x radius, y radius, angle
+        dyn_obs_list = [
+            [[29.1, 18.2], [17.5, 18.2], 0.1, 0.2, 0.5, math.pi],
+            [[16.775, 34.0], [22.5, 42.2], 0.1, 0.2, 0.5, math.pi]
+        ]
+
+        start_pos = (18.9, 7.0, math.radians(45))
+        end_pos = (44.7, 6.8, math.radians(270))
+        self.graphs.append(Graph(boundary_coordinates, obstacle_list, start_pos, end_pos, dyn_obs_list=dyn_obs_list))
+
         self.min_complexity = 0
         self.max_complexity = len(self.graphs) - 1
 
