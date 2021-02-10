@@ -17,7 +17,7 @@ class PathGenerator:
         together with mpc-solver. Uses a configuration specified in utils/config.py
     """
 
-    def __init__(self, config, build=False, verbose=False):
+    def __init__(self, config, build=False, verbose=False, sinus_object=False):
         self.config = config
         self.verbose = verbose
         self.ppp = PathPreProcessor(self.config)
@@ -25,6 +25,7 @@ class PathGenerator:
         self.time_dict = dict()
         self.solver_times = []
         self.overhead_times = []
+        self.sinus_object=sinus_object
 
         if build:
             self.mpc_generator.build()
@@ -127,8 +128,11 @@ class PathGenerator:
             path_ax.add_artist(veh)
             for j, obstacle in enumerate(self.ppp.dyn_obs_list):
                 p1, p2, freq, x_radius, y_radius, angle = obstacle
-                pos = self.ppp.generate_obstacle(
-                    p1, p2, freq, i * self.config.ts)
+                if self.sinus_object and j==2:
+                    pos = self.ppp.generate_sinus_obstacle(p1, p2, freq, i * self.config.ts)
+                else:
+                    pos = self.ppp.generate_obstacle(
+                        p1, p2, freq, i * self.config.ts)
                 obs[j] = mpatches.Ellipse(
                     pos, x_radius*2, y_radius*2, angle/(2*math.pi)*360, color='r', alpha=1, label='Obstacle')
                 x_rad_pad = x_radius + self.config.vehicle_width/2 + self.config.vehicle_margin
@@ -263,10 +267,11 @@ class PathGenerator:
                     constraints += [0.0] * (self.config.Nobs *
                                             self.config.nobs - len(constraints))
 
-                for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor)):
+                for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor, self.sinus_object)):
                     dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(
                         itertools.chain(*dyn_obstacle))
 
+                
                 # reduce search space for closest reference point TODO: how to select "5"?
                 lb_idx = max(0, idx-1*self.config.num_steps_taken)
                 ub_idx = min(len(ref_points), idx+5 *
