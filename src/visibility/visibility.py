@@ -140,12 +140,12 @@ class PathPreProcessor:
     
     def find_closest_vertices(self, current_pos, n_vertices = 10, N_STEPS_LOOK_BACK = 2):
         if n_vertices >= len(self.vert):
-            return self.vert.copy()
+            return self.vert
 
         _, idx = self.get_closest_vert(current_pos, self.vert)
         lb = max(0, idx - N_STEPS_LOOK_BACK) # look two objects behind 
         ub = min(len(self.vert), n_vertices - N_STEPS_LOOK_BACK)
-        return self.vert[lb:ub].copy()
+        return self.vert[lb:ub]
 
         ###### If one wants to use euclidian distance instead.
         # self.vert_copy.sort(key = lambda x: self.dist_between_points(current_pos, x))

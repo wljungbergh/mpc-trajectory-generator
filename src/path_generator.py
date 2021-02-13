@@ -267,9 +267,17 @@ class PathGenerator:
                     constraints += [0.0] * (self.config.Nobs *
                                             self.config.nobs - len(constraints))
 
-                for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor, self.sinus_object)):
-                    dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(
-                        itertools.chain(*dyn_obstacle))
+                if t == 0:
+                    for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle(t*self.config.ts, self.config.N_hor, self.sinus_object)):
+                        dyn_constraints[i*params_per_dyn_obs:(i+1)*params_per_dyn_obs] = list(
+                            itertools.chain(*dyn_obstacle))
+                else:
+                    # Rotate list to the left
+                    dyn_constraints = dyn_constraints[self.config.ndynobs*self.config.num_steps_taken:] + dyn_constraints[:self.config.ndynobs*self.config.num_steps_taken]
+                    for i, dyn_obstacle in enumerate(self.ppp.get_dyn_obstacle((t+self.config.N_hor-self.config.num_steps_taken)*self.config.ts, self.config.num_steps_taken, self.sinus_object)):
+                        # Update last num_steps taken dynobs positions
+                        dyn_constraints[(i+1)*params_per_dyn_obs-self.config.ndynobs*self.config.num_steps_taken:(i+1)*params_per_dyn_obs] = list(
+                            itertools.chain(*dyn_obstacle))
 
                 
                 # reduce search space for closest reference point TODO: how to select "5"?
