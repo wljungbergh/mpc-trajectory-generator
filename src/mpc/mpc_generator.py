@@ -17,9 +17,7 @@ class MpcModule:
     def rough_ref(self, pos, node_list, i=0):
     
         #i = 0 # current index of target node
-        v = self.config.throttle_ratio*self.config.lin_vel_max # Want to plan reference trajectory with less than top speed 
-        # so that there is room for the mpc solution tocatch up since it will likely 
-        # have a slightly longer trajectory
+        v = self.config.throttle_ratio*1.1*self.config.lin_vel_max # Want to plan reference trajectory with specific speed 
         x_ref = []
         y_ref = []
         theta_ref = []
