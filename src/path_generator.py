@@ -116,7 +116,7 @@ class PathGenerator:
         path_ax.legend(handles=legend_elems)
         obs = [object] * len(self.ppp.dyn_obs_list)
         obs_padded = [object] * len(self.ppp.dyn_obs_list)
-
+        plt.pause(20)
         for i in range(len(xx)):
             time = np.linspace(0, self.config.ts*i, i)
             omega_line.set_data(time, omega[:i])
@@ -358,7 +358,7 @@ class PathGenerator:
                     print(f"[MPC] Bad converge status: {exit_status}")
 
                 # and abs(states[-1]-end[-1])<0.5:
-                if np.allclose(states[-3:-1], end[0:2], atol=0.05, rtol=0):
+                if np.allclose(states[-3:-1], end[0:2], atol=0.05, rtol=0) and abs(system_input[-2]) < 0.005:
                     terminal = True
                     print("[MPC] MPC solution found.")
 
