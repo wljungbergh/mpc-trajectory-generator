@@ -128,7 +128,7 @@ class PathGenerator:
         obs = [object] * len(self.ppp.dyn_obs_list)
         obs_padded = [object] * len(self.ppp.dyn_obs_list)
         
-        start_idx = 300
+        start_idx = 0
         for i in range(start_idx,len(xx)):
             time = np.linspace(0, self.config.ts*i, i)
             omega_line.set_data(time, omega[:i])
@@ -154,8 +154,8 @@ class PathGenerator:
                 path_ax.add_artist(obs_padded[j])
                 path_ax.add_artist(obs[j])
 
-            path_ax.set_xlim([35, 47])
-            path_ax.set_ylim([10, 22])
+            #path_ax.set_xlim([35, 47])
+            #path_ax.set_ylim([10, 22])
             
             if make_video:
                 # put pixel buffer in numpy array
