@@ -8,6 +8,9 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import cv2
+
 import math
 import itertools
 
@@ -30,9 +33,9 @@ class PathGenerator:
         if build:
             self.mpc_generator.build()
 
-    def plot_results(self, xx, xy, vel, omega, start, end, dynamic=False):
+    def plot_results(self, xx, xy, vel, omega, start, end, dynamic=False, video=False):
         if dynamic:
-            self.plot_dynamic_results(xx, xy, vel, omega, start, end)
+            self.plot_dynamic_results(xx, xy, vel, omega, start, end, video)
         else:
             self.plot_static_results(xx, xy, vel, omega, start, end)
 
@@ -71,8 +74,14 @@ class PathGenerator:
         path_ax.legend(handles=legend_elems)
         path_ax.axis('equal')
 
-    def plot_dynamic_results(self, xx, xy, vel, omega, start, end):
-        fig = plt.figure(constrained_layout=True)
+    def plot_dynamic_results(self, xx, xy, vel, omega, start, end, make_video):
+        if make_video:
+            # Use Agg backend for canvas
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            fig = plt.figure(constrained_layout=True, figsize=(16,9))
+        else:
+            fig = plt.figure(constrained_layout=True)
+        
         gs = GridSpec(2, 4, figure=fig)
 
         vel_ax = fig.add_subplot(gs[0, :2])
@@ -103,6 +112,8 @@ class PathGenerator:
         path_ax.set_xlabel('X [m]', fontsize=15)
         path_ax.set_ylabel('Y [m]', fontsize=15)
         path_ax.axis('equal')
+        if make_video:
+            fig.tight_layout()
 
         legend_elems = [Line2D([0], [0], color='k', label='Original Boundary'),
                         Line2D([0], [0], color='g', label='Padded Boundary'),
@@ -113,11 +124,12 @@ class PathGenerator:
                         mpatches.Patch(color='r', label='Obstacle'),
                         mpatches.Patch(color='y', label='Padded obstacle')
                         ]
-        path_ax.legend(handles=legend_elems)
+        path_ax.legend(handles=legend_elems, loc='lower left')
         obs = [object] * len(self.ppp.dyn_obs_list)
         obs_padded = [object] * len(self.ppp.dyn_obs_list)
-        plt.pause(20)
-        for i in range(len(xx)):
+        
+        start_idx = 300
+        for i in range(start_idx,len(xx)):
             time = np.linspace(0, self.config.ts*i, i)
             omega_line.set_data(time, omega[:i])
             vel_line.set_data(time, vel[:i])
@@ -142,12 +154,36 @@ class PathGenerator:
                 path_ax.add_artist(obs_padded[j])
                 path_ax.add_artist(obs[j])
 
-            plt.draw()
-            plt.pause(self.config.ts / 10)
+            path_ax.set_xlim([35, 47])
+            path_ax.set_ylim([10, 22])
+            
+            if make_video:
+                # put pixel buffer in numpy array
+                canvas = FigureCanvas(fig)
+                canvas.draw()
+                mat = np.array(canvas.renderer._renderer)
+                mat = cv2.cvtColor(mat, cv2.COLOR_RGB2BGR)
+                if i == start_idx:
+                    # create OpenCV video writer
+                    video = cv2.VideoWriter('video.mp4', cv2.VideoWriter_fourcc(*'avc1'), 10, (mat.shape[1],mat.shape[0]))
+
+                # write frame to video
+                video.write(mat)
+                print(f'[INFO] wrote frame {i+1}/{len(xx)}')
+            else:
+                plt.draw()
+                plt.pause(self.config.ts / 10)
+            
             veh.remove()
             for j in range(len(self.ppp.dyn_obs_list)):
                 obs[j].remove()
                 obs_padded[j].remove()
+
+        if make_video:
+            # close video writer
+            video.release()
+            cv2.destroyAllWindows()
+            
 
         plt.show()
 
