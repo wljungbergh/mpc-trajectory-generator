@@ -140,12 +140,12 @@ class PathPreProcessor:
     
     def find_closest_vertices(self, current_pos, n_vertices = 10, N_STEPS_LOOK_BACK = 2):
         if n_vertices >= len(self.vert):
-            return self.vert.copy()
+            return self.vert
 
         _, idx = self.get_closest_vert(current_pos, self.vert)
         lb = max(0, idx - N_STEPS_LOOK_BACK) # look two objects behind 
         ub = min(len(self.vert), n_vertices - N_STEPS_LOOK_BACK)
-        return self.vert[lb:ub].copy()
+        return self.vert[lb:ub]
 
         ###### If one wants to use euclidian distance instead.
         # self.vert_copy.sort(key = lambda x: self.dist_between_points(current_pos, x))
@@ -162,20 +162,56 @@ class PathPreProcessor:
             t = np.expand_dims(t,1)
     
         p3 = t*p1 + (1-t)*p2
+
         return p3
+    
+    @staticmethod
+    def rotate(origin, point, angle):
+        ox, oy = origin
+        px, py = point
+
+        qx =  math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+        qy = math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+        return np.array([qx, qy])
+
+    def rotate_and_add(self, p1,p2, angle, addition):
+        rot = self.rotate(p1, p2, angle)
+        rot[1] += addition
+        rot = self.rotate(np.array([0,0]), rot, -angle)
+        return rot + p1
+    
+    def generate_sinus_obstacle(self, p1, p2, freq, time, ampl=1.5):
+        p1 = np.array(p1)
+        p2 = np.array(p2)
+        dp = p2 - p1
+        angle = np.arctan2(dp[1],dp[0])
+        time = np.array(time)
+        t = abs(np.sin(freq * time))
+        if type(t) == np.ndarray:
+            t = np.expand_dims(t,1)
+        p3 = t*p1 + (1-t)*p2
+
+        
+        add = ampl*np.cos(10*freq*time)
+        return self.rotate_and_add(p1, p3, angle, add)
 
 
-    def get_dyn_obstacle(self, t, horizon):
+    def get_dyn_obstacle(self, t, horizon, sinus_object=False):
         # TODO: allow simulation to start from previously calculated positionss
         if len(self.dyn_obs_list) == 0:
             return []
 
         time = np.linspace(t, t+horizon*self.config.ts, horizon)
         obs_list = []
-        for obs in self.dyn_obs_list:
-            p1, p2, freq, obstacle_radius = obs
-            padded_obstacle_radius = obstacle_radius+self.config.vehicle_width/2+self.config.vehicle_margin
-            obs_list.append([(*self.generate_obstacle(p1, p2, freq, t), padded_obstacle_radius) for t in time])
+        for i, obs in enumerate(self.dyn_obs_list):
+            p1, p2, freq, x_radius, y_radius, angle = obs
+            x_radius = x_radius+self.config.vehicle_width/2+self.config.vehicle_margin
+            y_radius = y_radius+self.config.vehicle_width/2+self.config.vehicle_margin
+            if sinus_object and i == 2: 
+                q = [(*self.generate_sinus_obstacle(p1, p2, freq, t), x_radius, y_radius, angle) for t in time]
+                obs_list.append(q)
+            else:
+                obs_list.append([(*self.generate_obstacle(p1, p2, freq, t), x_radius, y_radius, angle) for t in time])
 
         return obs_list
 

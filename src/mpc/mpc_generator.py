@@ -12,125 +12,12 @@ MAX_SOVLER_TIME = 500_000
 class MpcModule:
 
     def __init__(self, config):
-        self.obstacles = []                     # list of obstacles
         self.config = config
-    
-    def rough_ref2(self,start_pos, end_pos , node_list,i=0):
-    
-    # If starting position is included in 
-    # the nodelist we will 
-    
-        if((start_pos[0],start_pos[1]) == node_list[0]): 
-            i = 1 #target node is not starting position
-            
-        if((end_pos[0],end_pos[1]) != node_list[-1]):
-            node_list.append((end_pos[0],end_pos[1])) #adds end node if not included
-    
-        #i = 0 # current index of target node
-        v = self.config.throttle_ratio*self.config.lin_vel_max  # Want to plan reference trajectory with less than top speed 
-        omega = self.config.throttle_ratio*self.config.omega_max 
-        # so that there is room for the mpc solution tocatch up since it will likely 
-        # have a slightly longer trajectory
-        x_ref = []
-        y_ref = []
-        theta_ref = []
-        if len(start_pos) == 2:
-            start_pos = (start_pos[0],start_pos[1],0)
-        if len(end_pos) == 2:
-            end_pos = (end_pos[0],end_pos[1],0)
-        
-        
-        x,y,theta = start_pos
-        x_target, y_target = node_list[i]
-        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
-        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
-        theta_target = math.atan2(y_dir,x_dir)
-    
-        traveling = True
-        turning = True
-        while(traveling or turning):# for n in range(N):
-            t = self.config.ts
-            x_ref.append(x)
-            y_ref.append(y)
-            theta_ref.append(theta)
-            while(t>0):
-                if(math.hypot(x_target-x,y_target-y) == 0 and not turning):
-                    i=i+1
-
-                    if i >len(node_list) :
-                        # when we have arrived in the end node the desired angle is taken
-                        x_target, y_target = end_pos[0:2]
-                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
-                        theta_target = end_pos[2]
-                        turning = True
-                        traveling = False
-                    else:
-                        x_target, y_target = node_list[i]
-                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
-                        theta_target = math.atan2(y_dir,x_dir)
-                        turning = True #always set turning true for new target node
-            
-                if turning:
-                    theta_target = math.atan2(y_dir,x_dir)
-                    t_task = abs(theta_target-theta)/omega
-                    if t_task > t:
-                        # rotate in a node
-                        theta += t*np.sign(theta_target-theta)*omega 
-                        break
-                    else:
-                        # rotate in node
-                        theta += t_task*np.sign(theta_target-theta)*omega
-                        t = t-t_task # update how much time you have left on the current time step               
-                        turning = False
-                    
-        
-                dist = math.hypot(x_target-x,y_target-y)
-                if(dist == 0):
-                    #print('Breaking because dist in rouch ref is 0 ')
-                    break # we dont want to divide with 0 
-                    
-                t_task = dist/v
-                if t_task > t:
-                    # Travel along in the direction of the target for t
-                    x,y = x+x_dir*v*t, y+y_dir*v*t 
-                    break
-                else:
-                    # Travel to the current target and then set a new target
-                    x,y = x+x_dir*v*t_task, y+y_dir*v*t_task
-                    t = t-t_task # update how much time you have left on the current time step
-                    i = i+1
-                    turning = True
-                    if i >len(node_list)-1 :
-                        x_target,y_target = end_pos[0],end_pos[1]
-                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
-                        theta_target = end_pos[2]
-                        turning = True
-                        traveling= False
-                        break
-                    else:
-                        x_target, y_target = node_list[i] # set a new target node
-                        x_dir = (x_target-x)/safe_norm(x_target-x,y_target-y)
-                        y_dir = (y_target-y)/safe_norm(x_target-x,y_target-y)
-                        theta_target = math.atan2(y_dir,x_dir)
-
-        if(end_pos[0] != x or end_pos[1] != y or end_pos[2] != theta):
-            x_ref.append(x)
-            y_ref.append(y)
-            theta_ref.append(theta)
-        
-        travel_time = self.config.ts*len(x_ref)
-        print('The estimated travel time will be: {} seconds'.format(travel_time))
-        return x_ref, y_ref, theta_ref
 
     def rough_ref(self, pos, node_list, i=0):
     
         #i = 0 # current index of target node
-        v = self.config.throttle_ratio*self.config.lin_vel_max # Want to plan reference trajectory with less than top speed 
-        # so that there is room for the mpc solution tocatch up since it will likely 
-        # have a slightly longer trajectory
+        v = self.config.throttle_ratio*1.1*self.config.lin_vel_max # Want to plan reference trajectory with specific speed 
         x_ref = []
         y_ref = []
         theta_ref = []
@@ -181,7 +68,7 @@ class MpcModule:
         # ------------------------------------
         
         u = cs.SX.sym('u', self.config.nu*self.config.N_hor)
-        z0 = cs.SX.sym('z0', self.config.nz + self.config.N_hor + self.config.Nobs*self.config.nobs + self.config.Ndynobs*self.config.nobs*self.config.N_hor + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
+        z0 = cs.SX.sym('z0', self.config.nz + self.config.N_hor + self.config.Nobs*self.config.nobs + self.config.Ndynobs*self.config.ndynobs*self.config.N_hor + self.config.nx*self.config.N_hor) #init + final position + cost, obstacle params, circle radius
                             # params,         vel_ref each step, number obstacles x num params per obs, num dynamic obstacles X num param/obs X time steps,    refernce path for each time step
         (x, y, theta, vel_init, omega_init) = (z0[0], z0[1], z0[2], z0[3], z0[4])
         (xref , yref, thetaref, velref, omegaref) = (z0[5], z0[6], z0[7], z0[8], z0[9])
@@ -189,7 +76,7 @@ class MpcModule:
         cost = 0
         obstacle_constraints = 0
         # Index where reference points start
-        base = self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs+self.config.Ndynobs*self.config.nobs*self.config.N_hor
+        base = self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs+self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
 
         for t in range(0, self.config.N_hor): # LOOP OVER TIME STEPS
             
@@ -207,27 +94,29 @@ class MpcModule:
             ys_static = z0[self.config.nz+self.config.N_hor+1:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
             rs_static = z0[self.config.nz+self.config.N_hor+2:self.config.nz+self.config.N_hor+self.config.Nobs*self.config.nobs:self.config.nobs]
 
-            # ordering is x,y,r for obstacle 0 for N_hor timesteps, then x,y,r for obstalce 1 for N_hor timesteps etc.
+            # ordering is x,y,x_r, y_r, angle for obstacle 0 for N_hor timesteps, then x,y,x_r, y_r, angle for obstalce 1 for N_hor timesteps etc.
             end_of_static_obs_idx = self.config.nz + self.config.N_hor +  self.config.Nobs*self.config.nobs
-            end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.nobs*self.config.N_hor
-            xs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
-            ys_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+1:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
-            rs_dynamic = z0[end_of_static_obs_idx+t*self.config.nobs+2:end_of_dynamic_obs_idx:self.config.nobs*self.config.N_hor]
+            end_of_dynamic_obs_idx = end_of_static_obs_idx + self.config.Ndynobs*self.config.ndynobs*self.config.N_hor
+            xs_dynamic = z0[end_of_static_obs_idx+t*self.config.ndynobs:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            ys_dynamic = z0[end_of_static_obs_idx+t*self.config.ndynobs+1:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            x_radius = z0[end_of_static_obs_idx+t*self.config.ndynobs+2:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            y_radius = z0[end_of_static_obs_idx+t*self.config.ndynobs+3:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
+            As = z0[end_of_static_obs_idx+t*self.config.ndynobs+4:end_of_dynamic_obs_idx:self.config.ndynobs*self.config.N_hor]
 
-            xs = cs.vertcat(xs_static,xs_dynamic)
-            ys = cs.vertcat(ys_static,ys_dynamic)
-            rs = cs.vertcat(rs_static,rs_dynamic)
+            xdiff_static = x-xs_static
+            ydiff_static = y-ys_static
 
-            xdiff = x-xs
-            ydiff = y-ys
+            xdiff_dynamic = x-xs_dynamic
+            ydiff_dynamic = y-ys_dynamic
 
-            obstacle_constraints += cs.fmax(0, rs**2-xdiff**2-ydiff**2)
+            distance_inside_circle = rs_static**2-xdiff_static**2-ydiff_static**2
+
             # Ellipse parameterized according to https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
             # xs and ys are ellipse center points, xdiff is as before
             # x_radius and y_radius are radii in "x" and "y" directions
             # As are angles of ellipses (positive from x axis)
-            # distance_inside_ellipse = 1 - (xdiff*cs.cos(As)+ydiff*cs.sin(As))**2 / (x_radius**2) - (xdiff*cs.sin(As)-ydiff*cs.cos(As))**2 / (y_radius)**2
-            # obstacle_constraints += cs.fmax(0, distance_inside_ellipse)
+            distance_inside_ellipse = 1 - (xdiff_dynamic*cs.cos(As)+ydiff_dynamic*cs.sin(As))**2 / (x_radius**2) - (xdiff_dynamic*cs.sin(As)-ydiff_dynamic*cs.cos(As))**2 / (y_radius)**2
+            obstacle_constraints += cs.fmax(0, cs.vertcat(distance_inside_circle,distance_inside_ellipse))
 
             # our current point
             p = cs.vertcat(x,y)

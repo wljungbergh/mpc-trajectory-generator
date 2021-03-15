@@ -5,12 +5,8 @@ dependencies:
 - python=3.7
 - pip
 - numpy
-- jupyter
 - matplotlib
-- scikit-learn
 - scipy
-- pandas
-- seaborn
 - unidecode
 - pip:
   - pillow
@@ -19,3 +15,4 @@ dependencies:
   - casadi
   - extremitypathfinder>=2.1.0
   - pyclipper
+  - opencv-python
